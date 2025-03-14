@@ -1,11 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getPageData } from '../lib/supabase';
+import SkeletonLoader from '../components/SkeletonLoader.jsx';
 
 // This enables ISR - the page will be generated at build time
 // and then revalidated according to the ISR settings
 export const prerender = false;
 
+// Simulate loading delay for demonstration purposes
+// In production, you'd remove this artificial delay
 const pageData = await getPageData('home');
 ---
 

@@ -1,5 +1,6 @@
 ---
 import Navigation from '../components/Navigation.astro';
+import LoadingBar from '../components/LoadingBar.jsx';
 
 interface Props {
 	title: string;
@@ -20,6 +21,7 @@ const { title, description = "A simple hello page with dynamic content from Supa
 		<title>{title}</title>
 	</head>
 	<body class="bg-[#13151a] text-white">
+		<LoadingBar client:load />
 		<Navigation />
 		<div id="app">
 			<slot />
@@ -54,6 +56,28 @@ const { title, description = "A simple hello page with dynamic content from Supa
 
 			async function updateContent(path, updateScroll = true) {
 				try {
+					// Dispatch navigation start event for loading bar
+					window.dispatchEvent(new Event('navigationStart'));
+					
+					// Show skeleton loader
+					const appElement = document.querySelector('#app');
+					const originalContent = appElement.innerHTML;
+					appElement.innerHTML = `
+						<main class="mx-auto p-6 max-w-3xl">
+							<div class="animate-pulse">
+								<div class="h-12 w-3/4 mx-auto bg-accent-dark/50 rounded mb-8"></div>
+								<div class="space-y-4 border border-accent-light/25 bg-gradient-to-b from-accent-dark/66 to-accent-dark/33 p-6 rounded-lg">
+									<div class="h-4 bg-accent-dark/50 rounded w-full"></div>
+									<div class="h-4 bg-accent-dark/50 rounded w-5/6"></div>
+									<div class="h-4 bg-accent-dark/50 rounded w-4/6"></div>
+									<div class="h-4 bg-accent-dark/50 rounded w-full"></div>
+									<div class="h-4 bg-accent-dark/50 rounded w-3/4"></div>
+									<div class="h-4 bg-accent-dark/50 rounded w-5/6"></div>
+								</div>
+							</div>
+						</main>
+					`;
+					
 					// Fetch the HTML content of the new page
 					const response = await fetch(path);
 					const html = await response.text();
@@ -67,12 +91,24 @@ const { title, description = "A simple hello page with dynamic content from Supa
 					const newTitle = doc.querySelector('title')?.textContent;
 					
 					if (newContent) {
-						document.querySelector('#app').innerHTML = newContent;
-						if (newTitle) document.title = newTitle;
-						if (updateScroll) window.scrollTo(0, 0);
+						// Small delay to show the skeleton for at least a moment
+						setTimeout(() => {
+							document.querySelector('#app').innerHTML = newContent;
+							if (newTitle) document.title = newTitle;
+							if (updateScroll) window.scrollTo(0, 0);
+							
+							// Dispatch navigation end event for loading bar
+							window.dispatchEvent(new Event('navigationEnd'));
+						}, 300);
+					} else {
+						// If no content found, restore original
+						appElement.innerHTML = originalContent;
+						window.dispatchEvent(new Event('navigationEnd'));
 					}
 				} catch (error) {
 					console.error('Navigation error:', error);
+					// Dispatch navigation end event for loading bar
+					window.dispatchEvent(new Event('navigationEnd'));
 				}
 			}
 		</script>
@@ -100,5 +136,18 @@ const { title, description = "A simple hello page with dynamic content from Supa
 			Bitstream Vera Sans Mono,
 			Courier New,
 			monospace;
+	}
+	
+	/* Add animation for skeleton loading */
+	@keyframes pulse {
+		0%, 100% {
+			opacity: 0.5;
+		}
+		50% {
+			opacity: 0.8;
+		}
+	}
+	.animate-pulse {
+		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 	}
 </style>
