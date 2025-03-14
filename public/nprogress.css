@@ -41,32 +41,3 @@
 .nprogress-custom-parent #nprogress .bar {
   position: absolute;
 }
-
-/* Gallery fullscreen styles */
-.gallery-image {
-  transition: transform 0.2s ease;
-}
-
-.gallery-image:hover {
-  transform: scale(1.02);
-}
-
-#fullscreen-modal {
-  transition: opacity 0.3s ease;
-}
-
-#fullscreen-modal.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#fullscreen-modal:not(.hidden) {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-#fullscreen-image {
-  max-height: 90vh;
-  max-width: 90vw;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
