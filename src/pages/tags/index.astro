@@ -2,48 +2,53 @@
 import Layout from '../../layouts/Layout.astro';
 import TagCard from '../../components/TagCard.astro';
 import { supabase } from '../../lib/supabase';
-import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
-// Get all tags with library count
+// Get all tags
 const { data: tags, error } = await supabase
   .from('tags')
-  .select('*, library_tags(library_id)')
+  .select('*, library_count:libraries_aggregate(count)')
   .order('name');
 
-const isLoading = !tags && !error;
-
-// Count libraries for each tag
-if (tags) {
-  tags.forEach(tag => {
-    tag.libraryCount = tag.library_tags ? tag.library_tags.length : 0;
-  });
-  
-  // Sort by library count
-  tags.sort((a, b) => b.libraryCount - a.libraryCount);
-}
+// Process tags to include count
+const processedTags = tags?.map(tag => ({
+  ...tag,
+  count: tag.library_count?.count || 0
+})) || [];
 ---
 
-<Layout title="UI Library Tags - UI Library Directory">
-  <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
+<Layout title="Browse by Tags - UI Library Directory">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        Tags
-      </h1>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Browse by Tags</h1>
       <p class="text-lg text-gray-600">
-        Browse UI libraries by category or feature
+        Find UI libraries by features, capabilities, and categories
       </p>
     </div>
-    
-    {isLoading ? (
-      <SkeletonLoader type="card" count={12} client:load />
-    ) : (
-      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {tags && tags.map(tag => (
-          <TagCard tag={tag} />
-        ))}
-      </div>
-    )}
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      {processedTags.map(tag => (
+        <TagCard tag={tag} />
+      ))}
+      
+      {!tags && error && (
+        <div class="col-span-4 py-12 text-center">
+          <h3 class="text-lg font-medium text-gray-900 mb-1">Error loading tags</h3>
+          <p class="text-gray-500">
+            Please try refreshing the page.
+          </p>
+        </div>
+      )}
+      
+      {processedTags.length === 0 && !error && (
+        <div class="col-span-4 py-12 text-center">
+          <h3 class="text-lg font-medium text-gray-900 mb-1">No tags found</h3>
+          <p class="text-gray-500">
+            Check back later for more content.
+          </p>
+        </div>
+      )}
+    </div>
   </main>
 </Layout>

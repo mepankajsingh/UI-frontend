@@ -2,7 +2,6 @@
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
 import { supabase } from '../../lib/supabase';
-import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
@@ -15,11 +14,15 @@ const { data: tag, error: tagError } = await supabase
   .eq('slug', slug)
   .single();
 
+// Handle 404
+if (tagError && tagError.code === 'PGRST116') {
+  return Astro.redirect('/404');
+}
+
 // Get libraries with this tag
-const { data: libraryTags, error: librariesError } = await supabase
+const { data: libraries, error: librariesError } = await supabase
   .from('library_tags')
   .select(`
-    library_id,
     library:library_id(
       *,
       framework:framework_id(id, name, slug),
@@ -28,42 +31,36 @@ const { data: libraryTags, error: librariesError } = await supabase
   `)
   .eq('tag_id', tag?.id || 0);
 
-const libraries = libraryTags?.map(item => item.library) || [];
-
-const isLoading = (!tag && !tagError) || (!libraryTags && !librariesError);
-
-// Handle 404
-if (tagError && tagError.code === 'PGRST116') {
-  return Astro.redirect('/404');
-}
+// Process libraries to remove nesting
+const processedLibraries = libraries?.map(item => item.library) || [];
 ---
 
 <Layout title={tag ? `${tag.name} UI Libraries - UI Library Directory` : 'Loading...'}>
-  <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
-    {isLoading ? (
-      <SkeletonLoader type="detail" client:load />
-    ) : (
-      <>
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">
-            {tag.name}
-          </h1>
-          
-          <p class="text-lg text-gray-600">
-            {tag.description || `Browse UI libraries tagged with ${tag.name}`}
-          </p>
-        </div>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    {tag && (
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">{tag.name}</h1>
+        <p class="text-lg text-gray-600">
+          UI libraries and components tagged with {tag.name}
+        </p>
+      </div>
+    )}
+
+    {processedLibraries && (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {processedLibraries.map(library => (
+          <LibraryCard library={library} />
+        ))}
         
-        {libraries && libraries.length > 0 ? (
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {libraries.map(library => (
-              <LibraryCard library={library} />
-            ))}
+        {processedLibraries.length === 0 && (
+          <div class="col-span-3 py-12 text-center">
+            <h3 class="text-lg font-medium text-gray-900 mb-1">No libraries found</h3>
+            <p class="text-gray-500">
+              We don't have any libraries with this tag yet.
+            </p>
           </div>
-        ) : (
-          <p class="text-gray-600">No libraries found with this tag.</p>
         )}
-      </>
+      </div>
     )}
   </main>
 </Layout>

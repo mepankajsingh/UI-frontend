@@ -3,20 +3,17 @@ import Layout from '../layouts/Layout.astro';
 import Card from '../components/Card.astro';
 import FrameworkCard from '../components/FrameworkCard.astro';
 import LibraryCard from '../components/LibraryCard.astro';
+import SearchBar from '../components/SearchBar.jsx';
 import { supabase } from '../lib/supabase';
-import SkeletonLoader from '../components/SkeletonLoader.jsx';
 
-export const prerender = false;
-
-// Get top frameworks
-const { data: topFrameworks, error: frameworksError } = await supabase
+// Get frameworks
+const { data: frameworks } = await supabase
   .from('frameworks')
   .select('*')
-  .order('github_stars', { ascending: false })
-  .limit(6);
+  .order('name');
 
-// Get top libraries
-const { data: topLibraries, error: librariesError } = await supabase
+// Get popular libraries
+const { data: popularLibraries } = await supabase
   .from('libraries')
   .select(`
     *,
@@ -26,132 +23,118 @@ const { data: topLibraries, error: librariesError } = await supabase
   .order('github_stars', { ascending: false })
   .limit(6);
 
-// Get popular tags
-const { data: popularTags, error: tagsError } = await supabase
+// Get recent libraries
+const { data: recentLibraries } = await supabase
+  .from('libraries')
+  .select(`
+    *,
+    framework:framework_id(id, name, slug),
+    tags:library_tags(tag_id(id, name, slug))
+  `)
+  .order('created_at', { ascending: false })
+  .limit(3);
+
+// Get tags
+const { data: tags } = await supabase
   .from('tags')
-  .select('*, library_tags(library_id)')
-  .order('name')
-  .limit(10);
-
-const isFrameworksLoading = !topFrameworks && !frameworksError;
-const isLibrariesLoading = !topLibraries && !librariesError;
-const isTagsLoading = !popularTags && !tagsError;
-
-// Count libraries for each tag
-if (popularTags) {
-  popularTags.forEach(tag => {
-    tag.libraryCount = tag.library_tags ? tag.library_tags.length : 0;
-  });
-  
-  // Sort by library count
-  popularTags.sort((a, b) => b.libraryCount - a.libraryCount);
-}
+  .select('*')
+  .order('name');
 ---
 
-<Layout title="UI Library Directory - Find the Best UI Component Libraries">
+<Layout title="UI Library Directory - Find the Best JavaScript UI Libraries">
   <main>
     <!-- Hero Section -->
-    <div class="bg-gray-900 py-16 text-white">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h1 class="text-3xl sm:text-4xl font-bold mb-4">
-          <span class="text-indigo-400"><</span>Find the Perfect UI<span class="text-indigo-400">/></span>
-        </h1>
-        <p class="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-          Compare top UI frameworks, component libraries, and design systems for your next project.
-        </p>
-        <div class="flex flex-wrap justify-center gap-3">
-          <a href="/frameworks" class="inline-flex items-center px-5 py-2 border border-transparent text-base rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
-            Browse Frameworks
-          </a>
-          <a href="/libraries" class="inline-flex items-center px-5 py-2 border border-gray-700 text-base rounded-md shadow-sm text-gray-300 bg-gray-800 hover:bg-gray-700">
-            Explore Libraries
-          </a>
+    <div class="bg-white border-b border-gray-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+        <div class="text-center">
+          <h1 class="text-4xl font-bold text-gray-900 sm:text-5xl">
+            Find the Perfect UI Library
+          </h1>
+          <p class="mt-3 max-w-2xl mx-auto text-xl text-gray-600 sm:mt-4">
+            Discover and compare the best UI libraries and component kits for your next project
+          </p>
+          <div class="mt-8 max-w-xl mx-auto">
+            <SearchBar client:load />
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Top Frameworks Section -->
-    <section class="py-10 bg-gray-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-gray-900">
-            Popular Frameworks
-          </h2>
-          <a href="/frameworks" class="text-indigo-600 hover:text-indigo-800 text-sm">
-            View All
-          </a>
-        </div>
-        
-        {isFrameworksLoading ? (
-          <SkeletonLoader type="card" count={6} client:load />
-        ) : (
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {topFrameworks && topFrameworks.map(framework => (
-              <FrameworkCard framework={framework} />
-            ))}
-          </div>
-        )}
+    <!-- Frameworks Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Frameworks</h2>
+        <a href="/frameworks" class="text-indigo-600 hover:text-indigo-800 font-medium">
+          View all
+        </a>
       </div>
-    </section>
-    
-    <!-- Top Libraries Section -->
-    <section class="py-10 bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-gray-900">
-            Popular Libraries
-          </h2>
-          <a href="/libraries" class="text-indigo-600 hover:text-indigo-800 text-sm">
-            View All
-          </a>
+      
+      {frameworks && (
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {frameworks.map(framework => (
+            <FrameworkCard framework={framework} />
+          ))}
         </div>
-        
-        {isLibrariesLoading ? (
-          <SkeletonLoader type="card" count={6} client:load />
-        ) : (
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topLibraries && topLibraries.map(library => (
-              <LibraryCard library={library} />
-            ))}
-          </div>
-        )}
+      )}
+    </div>
+
+    <!-- Popular Libraries Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Popular Libraries</h2>
+        <a href="/libraries" class="text-indigo-600 hover:text-indigo-800 font-medium">
+          View all
+        </a>
       </div>
-    </section>
-    
-    <!-- Popular Tags Section -->
-    <section class="py-10 bg-gray-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-gray-900">
-            Popular Categories
-          </h2>
-          <a href="/tags" class="text-indigo-600 hover:text-indigo-800 text-sm">
-            View All
-          </a>
+      
+      {popularLibraries && (
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {popularLibraries.map(library => (
+            <LibraryCard library={library} />
+          ))}
         </div>
-        
-        {isTagsLoading ? (
-          <div class="animate-pulse flex flex-wrap gap-2">
-            {Array(10).fill(0).map((_, i) => (
-              <div key={i} class="h-8 bg-gray-200 rounded w-24"></div>
-            ))}
-          </div>
-        ) : (
-          <div class="flex flex-wrap gap-2">
-            {popularTags && popularTags.map(tag => (
-              <a 
-                href={`/tags/${tag.slug}`}
-                class="tag inline-flex items-center px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
-              >
-                {tag.name}
-                <span class="ml-1 bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-xs">
-                  {tag.libraryCount}
-                </span>
-              </a>
-            ))}
-          </div>
-        )}
+      )}
+    </div>
+
+    <!-- Recent Libraries Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Recently Added</h2>
+        <a href="/libraries" class="text-indigo-600 hover:text-indigo-800 font-medium">
+          View all
+        </a>
       </div>
-    </section>
+      
+      {recentLibraries && (
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {recentLibraries.map(library => (
+            <LibraryCard library={library} />
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- Tags Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-gray-100">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">Browse by Tag</h2>
+        <a href="/tags" class="text-indigo-600 hover:text-indigo-800 font-medium">
+          View all
+        </a>
+      </div>
+      
+      {tags && (
+        <div class="flex flex-wrap gap-2">
+          {tags.slice(0, 20).map(tag => (
+            <a 
+              href={`/tags/${tag.slug}`}
+              class="inline-flex items-center px-3 py-1.5 rounded-md text-sm bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-100"
+            >
+              {tag.name}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
   </main>
 </Layout>

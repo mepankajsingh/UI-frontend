@@ -52,5 +52,30 @@ export default function SkeletonLoader({ type = 'card', count = 3 }) {
     );
   }
   
+  if (type === 'framework') {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {Array(count).fill(0).map((_, i) => (
+          <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-100 p-3 animate-pulse">
+            <div className="flex flex-col items-center">
+              <div className="h-12 w-12 bg-gray-200 rounded-md mb-2"></div>
+              <div className="h-5 bg-gray-200 rounded w-3/4 mb-1"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  
+  if (type === 'tag') {
+    return (
+      <div className="animate-pulse flex flex-wrap gap-2">
+        {Array(count).fill(0).map((_, i) => (
+          <div key={i} className="h-8 bg-gray-200 rounded w-24"></div>
+        ))}
+      </div>
+    );
+  }
+  
   return null;
 }

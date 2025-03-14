@@ -1,7 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../lib/supabase';
-import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
@@ -18,8 +17,6 @@ const { data: library, error: libraryError } = await supabase
   .eq('slug', slug)
   .single();
 
-const isLoading = !library && !libraryError;
-
 // Handle 404
 if (libraryError && libraryError.code === 'PGRST116') {
   return Astro.redirect('/404');
@@ -35,9 +32,7 @@ const formatDate = (dateString) => {
 
 <Layout title={library ? `${library.name} - UI Library Directory` : 'Loading...'}>
   <main class="mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
-    {isLoading ? (
-      <SkeletonLoader type="detail" client:load />
-    ) : (
+    {library && (
       <>
         <div class="mb-6">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -195,13 +190,13 @@ const formatDate = (dateString) => {
                 {library.total_components !== undefined && (
                   <div class="flex justify-between">
                     <span class="text-gray-600">Components</span>
-                    <span<boltAction type="file" filePath="src/pages/libraries/[slug].astro">                    <span class="font-medium">{library.total_components}</span>
+                    <span class="font-medium">{library.total_components}</span>
                   </div>
                 )}
                 {library.bundle_size && (
                   <div class="flex justify-between">
                     <span class="text-gray-600">Bundle Size</span>
-                    <span class="font-medium">{library.bundle_size}</span>
+                <boltAction type="file" filePath="src/pages/libraries/[slug].astro">                    <span class="font-medium">{library.bundle_size}</span>
                   </div>
                 )}
                 {library.styling && (

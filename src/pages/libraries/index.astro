@@ -2,10 +2,10 @@
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
 import { supabase } from '../../lib/supabase';
-import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
+// Get all libraries
 const { data: libraries, error } = await supabase
   .from('libraries')
   .select(`
@@ -13,30 +13,31 @@ const { data: libraries, error } = await supabase
     framework:framework_id(id, name, slug),
     tags:library_tags(tag_id(id, name, slug))
   `)
-  .order('github_stars', { ascending: false });
-
-const isLoading = !libraries && !error;
+  .order('name');
 ---
 
 <Layout title="UI Component Libraries - UI Library Directory">
-  <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        UI Component Libraries
-      </h1>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">UI Component Libraries</h1>
       <p class="text-lg text-gray-600">
-        Browse and compare the best UI component libraries for your projects
+        Discover component libraries and design systems for your preferred framework
       </p>
     </div>
-    
-    {isLoading ? (
-      <SkeletonLoader type="card" count={9} client:load />
-    ) : (
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {libraries && libraries.map(library => (
-          <LibraryCard library={library} />
-        ))}
-      </div>
-    )}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {libraries && libraries.map(library => (
+        <LibraryCard library={library} />
+      ))}
+      
+      {!libraries && error && (
+        <div class="col-span-3 py-12 text-center">
+          <h3 class="text-lg font-medium text-gray-900 mb-1">Error loading libraries</h3>
+          <p class="text-gray-500">
+            Please try refreshing the page.
+          </p>
+        </div>
+      )}
+    </div>
   </main>
 </Layout>

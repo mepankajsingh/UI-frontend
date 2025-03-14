@@ -1,101 +1,76 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import LibraryCard from '../components/LibraryCard.astro';
-import FrameworkCard from '../components/FrameworkCard.astro';
 import SearchBar from '../components/SearchBar.jsx';
 import { supabase } from '../lib/supabase';
-import SkeletonLoader from '../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
+// Get search query from URL
 const query = Astro.url.searchParams.get('q') || '';
-let libraries = [];
-let frameworks = [];
-let isLoading = false;
 
+// Search libraries if query exists
+let libraries = [];
 if (query) {
-  isLoading = true;
-  
-  // Search libraries
-  const { data: libraryResults } = await supabase
+  const { data } = await supabase
     .from('libraries')
     .select(`
       *,
       framework:framework_id(id, name, slug),
       tags:library_tags(tag_id(id, name, slug))
     `)
-    .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+    .or(`name.ilike.%${query}%, description.ilike.%${query}%`)
     .order('github_stars', { ascending: false });
   
-  // Search frameworks
-  const { data: frameworkResults } = await supabase
-    .from('frameworks')
-    .select('*')
-    .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
-    .order('github_stars', { ascending: false });
-  
-  libraries = libraryResults || [];
-  frameworks = frameworkResults || [];
-  isLoading = false;
+  libraries = data || [];
 }
 ---
 
-<Layout title={`Search: ${query} - UI Library Directory`}>
-  <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
+<Layout title={query ? `Search results for "${query}" - UI Library Directory` : 'Search - UI Library Directory'}>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8">
-      <h1 class="text-3xl font-<boltAction type="file" filePath="src/pages/search.astro">      <h1 class="text-3xl font-bold text-gray-900 mb-6">
-        Search Results
-      </h1>
-      
-      <div class="mb-8 max-w-2xl">
+      <h1 class="text-3xl font-bold text-gray-900 mb-4">Search UI Libraries</h1>
+      <div class="max-w-2xl">
         <SearchBar initialQuery={query} client:load />
       </div>
-      
-      {query && (
-        <p class="text-lg text-gray-600 mb-6">
-          {isLoading ? 'Searching...' : 
-            `Found ${frameworks.length} frameworks and ${libraries.length} libraries for "${query}"`}
-        </p>
-      )}
-      
-      {isLoading ? (
-        <SkeletonLoader type="card" count={6} client:load />
-      ) : (
-        <>
-          {frameworks.length > 0 && (
-            <div class="mb-10">
-              <h2 class="text-xl font-bold text-gray-900 mb-4">
-                Frameworks
-              </h2>
-              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {frameworks.map(framework => (
-                  <FrameworkCard framework={framework} />
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {libraries.length > 0 && (
-            <div>
-              <h2 class="text-xl font-bold text-gray-900 mb-4">
-                Libraries
-              </h2>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {libraries.map(library => (
-                  <LibraryCard library={library} />
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {query && frameworks.length === 0 && libraries.length === 0 && (
-            <div class="text-center py-12">
-              <p class="text-lg text-gray-600">No results found for "{query}"</p>
-              <p class="text-gray-500 mt-2">Try a different search term or browse our categories</p>
-            </div>
-          )}
-        </>
-      )}
     </div>
+
+    {query && (
+      <div class="mt-8">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">
+          {libraries.length > 0 
+            ? `Found ${libraries.length} ${libraries.length === 1 ? 'result' : 'results'} for "${query}"`
+            : `No results found for "${query}"`}
+        </h2>
+        
+        {libraries.length > 0 ? (
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {libraries.map(library => (
+              <LibraryCard library={library} />
+            ))}
+          </div>
+        ) : (
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <p class="text-gray-600 mb-4">
+              We couldn't find any libraries matching your search. Try:
+            </p>
+            <ul class="list-disc pl-5 text-gray-600 space-y-1">
+              <li>Using different keywords</li>
+              <li>Checking for typos</li>
+              <li>Using more general terms</li>
+              <li>Browsing libraries by framework instead</li>
+            </ul>
+          </div>
+        )}
+      </div>
+    )}
+    
+    {!query && (
+      <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+        <p class="text-gray-600">
+          Enter a search term above to find UI libraries.
+        </p>
+      </div>
+    )}
   </main>
 </Layout>
