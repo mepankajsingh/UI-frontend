@@ -2,13 +2,16 @@
 import Layout from '../../layouts/Layout.astro';
 import FrameworkCard from '../../components/FrameworkCard.astro';
 import { supabase } from '../../lib/supabase';
+import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
-const { data: frameworks } = await supabase
+const { data: frameworks, error } = await supabase
   .from('frameworks')
   .select('*')
   .order('github_stars', { ascending: false });
+
+const isLoading = !frameworks && !error;
 ---
 
 <Layout title="JavaScript Frameworks - UI Library Directory">
@@ -22,10 +25,14 @@ const { data: frameworks } = await supabase
       </p>
     </div>
     
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-      {frameworks && frameworks.map(framework => (
-        <FrameworkCard framework={framework} />
-      ))}
-    </div>
+    {isLoading ? (
+      <SkeletonLoader type="card" count={12} client:load />
+    ) : (
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {frameworks && frameworks.map(framework => (
+          <FrameworkCard framework={framework} />
+        ))}
+      </div>
+    )}
   </main>
 </Layout>

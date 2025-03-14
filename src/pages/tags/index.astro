@@ -2,37 +2,48 @@
 import Layout from '../../layouts/Layout.astro';
 import TagCard from '../../components/TagCard.astro';
 import { supabase } from '../../lib/supabase';
+import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
-const { data: tags } = await supabase
+// Get all tags with library count
+const { data: tags, error } = await supabase
   .from('tags')
   .select('*, library_tags(library_id)')
   .order('name');
+
+const isLoading = !tags && !error;
 
 // Count libraries for each tag
 if (tags) {
   tags.forEach(tag => {
     tag.libraryCount = tag.library_tags ? tag.library_tags.length : 0;
   });
+  
+  // Sort by library count
+  tags.sort((a, b) => b.libraryCount - a.libraryCount);
 }
 ---
 
 <Layout title="UI Library Tags - UI Library Directory">
   <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
     <div class="mb-8">
-      <h1 class="text-3xl font-bold leading-tight mb-2 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-indigo-400 to-indigo-200">
-        UI Library Tags
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        Tags
       </h1>
       <p class="text-lg text-gray-600">
-        Browse UI libraries by category and feature
+        Browse UI libraries by category or feature
       </p>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {tags && tags.map(tag => (
-        <TagCard tag={tag} />
-      ))}
-    </div>
+    {isLoading ? (
+      <SkeletonLoader type="card" count={12} client:load />
+    ) : (
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {tags && tags.map(tag => (
+          <TagCard tag={tag} />
+        ))}
+      </div>
+    )}
   </main>
 </Layout>

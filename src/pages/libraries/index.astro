@@ -2,10 +2,11 @@
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
 import { supabase } from '../../lib/supabase';
+import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
-const { data: libraries } = await supabase
+const { data: libraries, error } = await supabase
   .from('libraries')
   .select(`
     *,
@@ -13,6 +14,8 @@ const { data: libraries } = await supabase
     tags:library_tags(tag_id(id, name, slug))
   `)
   .order('github_stars', { ascending: false });
+
+const isLoading = !libraries && !error;
 ---
 
 <Layout title="UI Component Libraries - UI Library Directory">
@@ -26,10 +29,14 @@ const { data: libraries } = await supabase
       </p>
     </div>
     
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {libraries && libraries.map(library => (
-        <LibraryCard library={library} />
-      ))}
-    </div>
+    {isLoading ? (
+      <SkeletonLoader type="card" count={9} client:load />
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {libraries && libraries.map(library => (
+          <LibraryCard library={library} />
+        ))}
+      </div>
+    )}
   </main>
 </Layout>

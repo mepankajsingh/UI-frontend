@@ -2,58 +2,68 @@
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
 import { supabase } from '../../lib/supabase';
+import SkeletonLoader from '../../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
 
-// Get tag info
-const { data: tag } = await supabase
+// Get tag details
+const { data: tag, error: tagError } = await supabase
   .from('tags')
   .select('*')
   .eq('slug', slug)
   .single();
 
-if (!tag) {
-  return Astro.redirect('/404');
-}
-
 // Get libraries with this tag
-const { data: taggedLibraries } = await supabase
+const { data: libraryTags, error: librariesError } = await supabase
   .from('library_tags')
   .select(`
-    library_id(
+    library_id,
+    library:library_id(
       *,
       framework:framework_id(id, name, slug),
       tags:library_tags(tag_id(id, name, slug))
     )
   `)
-  .eq('tag_id', tag.id);
+  .eq('tag_id', tag?.id || 0);
 
-const libraries = taggedLibraries ? taggedLibraries.map(item => item.library_id) : [];
+const libraries = libraryTags?.map(item => item.library) || [];
+
+const isLoading = (!tag && !tagError) || (!libraryTags && !librariesError);
+
+// Handle 404
+if (tagError && tagError.code === 'PGRST116') {
+  return Astro.redirect('/404');
+}
 ---
 
-<Layout title={`${tag.name} UI Libraries - UI Library Directory`} description={`Browse UI component libraries tagged with ${tag.name}`}>
+<Layout title={tag ? `${tag.name} UI Libraries - UI Library Directory` : 'Loading...'}>
   <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold leading-tight mb-2 text-primary">
-        {tag.name} UI Libraries
-      </h1>
-      <p class="text-lg text-secondary-text">
-        Browse UI component libraries tagged with {tag.name}
-      </p>
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {libraries && libraries.map(library => (
-        <LibraryCard library={library} />
-      ))}
-      
-      {libraries && libraries.length === 0 && (
-        <p class="col-span-3 text-center py-8 text-gray-500">
-          No libraries found with this tag yet.
-        </p>
-      )}
-    </div>
+    {isLoading ? (
+      <SkeletonLoader type="detail" client:load />
+    ) : (
+      <>
+        <div class="mb-8">
+          <h1 class="text-3xl font-bold text-gray-900 mb-2">
+            {tag.name}
+          </h1>
+          
+          <p class="text-lg text-gray-600">
+            {tag.description || `Browse UI libraries tagged with ${tag.name}`}
+          </p>
+        </div>
+        
+        {libraries && libraries.length > 0 ? (
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {libraries.map(library => (
+              <LibraryCard library={library} />
+            ))}
+          </div>
+        ) : (
+          <p class="text-gray-600">No libraries found with this tag.</p>
+        )}
+      </>
+    )}
   </main>
 </Layout>

@@ -1,48 +1,100 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import SearchBar from '../components/SearchBar';
 import LibraryCard from '../components/LibraryCard.astro';
-import { searchLibraries } from '../lib/supabase';
+import FrameworkCard from '../components/FrameworkCard.astro';
+import SearchBar from '../components/SearchBar.jsx';
+import { supabase } from '../lib/supabase';
+import SkeletonLoader from '../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
 const query = Astro.url.searchParams.get('q') || '';
-const libraries = query ? await searchLibraries(query) : [];
+let libraries = [];
+let frameworks = [];
+let isLoading = false;
+
+if (query) {
+  isLoading = true;
+  
+  // Search libraries
+  const { data: libraryResults } = await supabase
+    .from('libraries')
+    .select(`
+      *,
+      framework:framework_id(id, name, slug),
+      tags:library_tags(tag_id(id, name, slug))
+    `)
+    .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+    .order('github_stars', { ascending: false });
+  
+  // Search frameworks
+  const { data: frameworkResults } = await supabase
+    .from('frameworks')
+    .select('*')
+    .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+    .order('github_stars', { ascending: false });
+  
+  libraries = libraryResults || [];
+  frameworks = frameworkResults || [];
+  isLoading = false;
+}
 ---
 
-<Layout title="Search UI Libraries - UI Library Directory" description="Search for UI component libraries across different JavaScript frameworks">
+<Layout title={`Search: ${query} - UI Library Directory`}>
   <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
     <div class="mb-8">
-      <h1 class="text-3xl font-bold leading-tight mb-4 text-primary">
-        Search UI Libraries
+      <h1 class="text-3xl font-<boltAction type="file" filePath="src/pages/search.astro">      <h1 class="text-3xl font-bold text-gray-900 mb-6">
+        Search Results
       </h1>
       
-      <div class="mb-6">
+      <div class="mb-8 max-w-2xl">
         <SearchBar initialQuery={query} client:load />
       </div>
       
       {query && (
-        <p class="text-lg text-secondary-text mb-4">
-          {libraries.length} results for "{query}"
-        </p>
-      )}
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {libraries && libraries.map(library => (
-        <LibraryCard library={library} />
-      ))}
-      
-      {query && libraries.length === 0 && (
-        <p class="col-span-3 text-center py-8 text-gray-500">
-          No libraries found matching your search.
+        <p class="text-lg text-gray-600 mb-6">
+          {isLoading ? 'Searching...' : 
+            `Found ${frameworks.length} frameworks and ${libraries.length} libraries for "${query}"`}
         </p>
       )}
       
-      {!query && (
-        <p class="col-span-3 text-center py-8 text-gray-500">
-          Enter a search term to find UI libraries.
-        </p>
+      {isLoading ? (
+        <SkeletonLoader type="card" count={6} client:load />
+      ) : (
+        <>
+          {frameworks.length > 0 && (
+            <div class="mb-10">
+              <h2 class="text-xl font-bold text-gray-900 mb-4">
+                Frameworks
+              </h2>
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {frameworks.map(framework => (
+                  <FrameworkCard framework={framework} />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {libraries.length > 0 && (
+            <div>
+              <h2 class="text-xl font-bold text-gray-900 mb-4">
+                Libraries
+              </h2>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {libraries.map(library => (
+                  <LibraryCard library={library} />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {query && frameworks.length === 0 && libraries.length === 0 && (
+            <div class="text-center py-12">
+              <p class="text-lg text-gray-600">No results found for "{query}"</p>
+              <p class="text-gray-500 mt-2">Try a different search term or browse our categories</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   </main>
