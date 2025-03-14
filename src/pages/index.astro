@@ -1,0 +1,49 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getPageData } from '../lib/supabase';
+
+// This enables ISR - the page will be generated at build time
+// and then revalidated according to the ISR settings
+export const prerender = false;
+
+const pageData = await getPageData('home');
+---
+
+<Layout title={pageData.title}>
+  <main>
+    <h1>{pageData.title}</h1>
+    <div class="content">
+      {pageData.content}
+    </div>
+  </main>
+</Layout>
+
+<style>
+  main {
+    margin: auto;
+    padding: 1.5rem;
+    max-width: 800px;
+    color: white;
+  }
+  h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    margin-bottom: 1em;
+    background-image: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 400%;
+    background-position: 0%;
+  }
+  .content {
+    margin-bottom: 2rem;
+    border: 1px solid rgba(var(--accent-light), 25%);
+    background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    line-height: 1.6;
+  }
+</style>

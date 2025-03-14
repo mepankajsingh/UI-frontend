@@ -1,0 +1,130 @@
+---
+import Navigation from '../components/Navigation.astro';
+
+interface Props {
+	title: string;
+	description?: string;
+}
+
+const { title, description = "A simple hello page with dynamic content from Supabase" } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content={description} />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+	</head>
+	<body>
+		<Navigation />
+		<div id="app">
+			<slot />
+		</div>
+		<script>
+			// Simple client-side router for SPA behavior
+			document.addEventListener('DOMContentLoaded', () => {
+				document.body.addEventListener('click', (e) => {
+					const target = e.target as HTMLElement;
+					const anchor = target.closest('a');
+					
+					if (anchor && anchor.href && anchor.href.startsWith(window.location.origin) && !anchor.dataset.external) {
+						e.preventDefault();
+						const url = new URL(anchor.href);
+						navigateTo(url.pathname);
+					}
+				});
+			});
+
+			// Handle browser back/forward navigation
+			window.addEventListener('popstate', (e) => {
+				if (e.state && e.state.path) {
+					updateContent(e.state.path, false);
+				}
+			});
+
+			async function navigateTo(path) {
+				// Update browser history
+				window.history.pushState({ path }, '', path);
+				await updateContent(path);
+			}
+
+			async function updateContent(path, updateScroll = true) {
+				try {
+					// Fetch the HTML content of the new page
+					const response = await fetch(path);
+					const html = await response.text();
+					
+					// Create a temporary element to parse the HTML
+					const parser = new DOMParser();
+					const doc = parser.parseFromString(html, 'text/html');
+					
+					// Extract the main content
+					const newContent = doc.querySelector('#app')?.innerHTML;
+					const newTitle = doc.querySelector('title')?.textContent;
+					
+					if (newContent) {
+						document.querySelector('#app').innerHTML = newContent;
+						if (newTitle) document.title = newTitle;
+						if (updateScroll) window.scrollTo(0, 0);
+					}
+				} catch (error) {
+					console.error('Navigation error:', error);
+				}
+			}
+		</script>
+	</body>
+</html>
+<style is:global>
+	:root {
+		--accent: 136, 58, 234;
+		--accent-light: 224, 204, 250;
+		--accent-dark: 49, 10, 101;
+		--accent-gradient: linear-gradient(
+			45deg,
+			rgb(var(--accent)),
+			rgb(var(--accent-light)) 30%,
+			white 60%
+		);
+	}
+	html {
+		font-family: system-ui, sans-serif;
+		background: #13151a;
+	}
+	code {
+		font-family:
+			Menlo,
+			Monaco,
+			Lucida Console,
+			Liberation Mono,
+			DejaVu Sans Mono,
+			Bitstream Vera Sans Mono,
+			Courier New,
+			monospace;
+	}
+	nav {
+		background-color: rgba(var(--accent-dark), 80%);
+		padding: 1rem;
+		margin-bottom: 2rem;
+	}
+	nav ul {
+		display: flex;
+		gap: 2rem;
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		justify-content: center;
+	}
+	nav a {
+		color: white;
+		text-decoration: none;
+		font-weight: bold;
+		transition: color 0.2s ease;
+	}
+	nav a:hover {
+		color: rgb(var(--accent-light));
+	}
+</style>

@@ -1,40 +1,54 @@
-# Welcome to Remix!
-
-- ð [Remix docs](https://remix.run/docs)
-
-## Development
-
-Run the dev server:
-
-```shellscript
-npm run dev
-```
-
-## Deployment
-
-First, build your app for production:
+# Astro Starter Kit: Basics
 
 ```sh
-npm run build
+npm create astro@latest -- --template basics
 ```
 
-Then run the app in production mode:
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
+[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
 
-```sh
-npm start
+> ð§âð **Seasoned astronaut?** Delete this file. Have fun!
+
+![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
+
+## ð Project Structure
+
+Inside of your Astro project, you'll see the following folders and files:
+
+```text
+/
+âââ public/
+â   âââ favicon.svg
+âââ src/
+â   âââ components/
+â   â   âââ Card.astro
+â   âââ layouts/
+â   â   âââ Layout.astro
+â   âââ pages/
+â       âââ index.astro
+âââ package.json
 ```
 
-Now you'll need to pick a host to deploy it to.
+Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
 
-### DIY
+There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
 
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
+Any static assets, like images, can be placed in the `public/` directory.
 
-Make sure to deploy the output of `npm run build`
+## ð§ Commands
 
-- `build/server`
-- `build/client`
+All commands are run from the root of the project, from a terminal:
 
-## Styling
+| Command                   | Action                                           |
+| :------------------------ | :----------------------------------------------- |
+| `npm install`             | Installs dependencies                            |
+| `npm run dev`             | Starts local dev server at `localhost:4321`      |
+| `npm run build`           | Build your production site to `./dist/`          |
+| `npm run preview`         | Preview your build locally, before deploying     |
+| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
+| `npm run astro -- --help` | Get help using the Astro CLI                     |
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever css framework you prefer. See the [Vite docs on css](https://vitejs.dev/guide/features.html#css) for more information.
+## ð Want to learn more?
+
+Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
