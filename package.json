@@ -10,11 +10,11 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/netlify": "^4.1.1",
-    "@astrojs/react": "^3.0.10",
-    "@astrojs/tailwind": "^5.1.0",
+    "@astrojs/netlify": "^6.2.3",
+    "@astrojs/react": "^4.2.1",
+    "@astrojs/tailwind": "^6.0.0",
     "@supabase/supabase-js": "^2.39.3",
-    "astro": "^4.4.0",
+    "astro": "^5.5.2",
     "nprogress": "^0.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
