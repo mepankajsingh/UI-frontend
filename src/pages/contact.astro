@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import { getPageData } from '../lib/supabase';
 import ContactForm from '../components/ContactForm.jsx';
-import SkeletonLoader from '../components/SkeletonLoader.jsx';
 
 export const prerender = false;
 
@@ -11,10 +10,10 @@ const pageData = await getPageData('contact');
 
 <Layout title={pageData.title}>
   <main class="mx-auto p-6 max-w-3xl">
-    <h1 class="text-5xl font-bold leading-tight text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-accent via-accent-light to-white bg-[length:400%] bg-[0%]">
+    <h1 class="text-5xl font-bold leading-tight text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-[rgb(136,58,234)] via-[rgb(224,204,250)] to-white bg-[length:400%] bg-[0%]">
       {pageData.title}
     </h1>
-    <div class="mb-8 border border-accent-light/25 bg-gradient-to-b from-accent-dark/66 to-accent-dark/33 p-6 rounded-lg text-xl leading-relaxed">
+    <div class="mb-8 border border-[rgba(224,204,250,0.25)] bg-gradient-to-b from-[rgba(49,10,101,0.66)] to-[rgba(49,10,101,0.33)] p-6 rounded-lg text-xl leading-relaxed">
       {pageData.content}
     </div>
     <ContactForm client:load />

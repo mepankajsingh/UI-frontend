@@ -4,11 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        accent: 'rgb(var(--accent) / <alpha-value>)',
-        'accent-light': 'rgb(var(--accent-light) / <alpha-value>)',
-        'accent-dark': 'rgb(var(--accent-dark) / <alpha-value>)',
+        accent: 'rgb(136, 58, 234)',
+        'accent-light': 'rgb(224, 204, 250)',
+        'accent-dark': 'rgb(49, 10, 101)',
+      },
+      animation: {
+        pulse: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      keyframes: {
+        pulse: {
+          '0%, 100%': { opacity: 0.5 },
+          '50%': { opacity: 0.8 },
+        },
       },
     },
   },
   plugins: [],
-}
+};

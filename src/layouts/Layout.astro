@@ -1,6 +1,5 @@
 ---
 import Navigation from '../components/Navigation.astro';
-import LoadingBar from '../components/LoadingBar.jsx';
 
 interface Props {
 	title: string;
@@ -19,14 +18,25 @@ const { title, description = "A simple hello page with dynamic content from Supa
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
+		<link rel="stylesheet" href="/nprogress.css" />
 	</head>
 	<body class="bg-[#13151a] text-white">
-		<LoadingBar client:load />
 		<Navigation />
 		<div id="app">
 			<slot />
 		</div>
 		<script>
+			// Import NProgress
+			import NProgress from 'nprogress';
+			
+			// Configure NProgress
+			NProgress.configure({ 
+				showSpinner: false,
+				minimum: 0.1,
+				easing: 'ease',
+				speed: 500
+			});
+
 			// Simple client-side router for SPA behavior
 			document.addEventListener('DOMContentLoaded', () => {
 				document.body.addEventListener('click', (e) => {
@@ -56,23 +66,25 @@ const { title, description = "A simple hello page with dynamic content from Supa
 
 			async function updateContent(path, updateScroll = true) {
 				try {
-					// Dispatch navigation start event for loading bar
-					window.dispatchEvent(new Event('navigationStart'));
+					// Start loading indicators
+					NProgress.start();
 					
 					// Show skeleton loader
 					const appElement = document.querySelector('#app');
 					const originalContent = appElement.innerHTML;
+					
+					// Insert skeleton loader
 					appElement.innerHTML = `
 						<main class="mx-auto p-6 max-w-3xl">
 							<div class="animate-pulse">
-								<div class="h-12 w-3/4 mx-auto bg-accent-dark/50 rounded mb-8"></div>
-								<div class="space-y-4 border border-accent-light/25 bg-gradient-to-b from-accent-dark/66 to-accent-dark/33 p-6 rounded-lg">
-									<div class="h-4 bg-accent-dark/50 rounded w-full"></div>
-									<div class="h-4 bg-accent-dark/50 rounded w-5/6"></div>
-									<div class="h-4 bg-accent-dark/50 rounded w-4/6"></div>
-									<div class="h-4 bg-accent-dark/50 rounded w-full"></div>
-									<div class="h-4 bg-accent-dark/50 rounded w-3/4"></div>
-									<div class="h-4 bg-accent-dark/50 rounded w-5/6"></div>
+								<div class="h-12 w-3/4 mx-auto bg-[rgba(49,10,101,0.5)] rounded mb-8"></div>
+								<div class="space-y-4 border border-[rgba(224,204,250,0.25)] bg-gradient-to-b from-[rgba(49,10,101,0.66)] to-[rgba(49,10,101,0.33)] p-6 rounded-lg">
+									<div class="h-4 bg-[rgba(49,10,101,0.5)] rounded w-full"></div>
+									<div class="h-4 bg-[rgba(49,10,101,0.5)] rounded w-5/6"></div>
+									<div class="h-4 bg-[rgba(49,10,101,0.5)] rounded w-4/6"></div>
+									<div class="h-4 bg-[rgba(49,10,101,0.5)] rounded w-full"></div>
+									<div class="h-4 bg-[rgba(49,10,101,0.5)] rounded w-3/4"></div>
+									<div class="h-4 bg-[rgba(49,10,101,0.5)] rounded w-5/6"></div>
 								</div>
 							</div>
 						</main>
@@ -97,18 +109,17 @@ const { title, description = "A simple hello page with dynamic content from Supa
 							if (newTitle) document.title = newTitle;
 							if (updateScroll) window.scrollTo(0, 0);
 							
-							// Dispatch navigation end event for loading bar
-							window.dispatchEvent(new Event('navigationEnd'));
+							// Complete the loading
+							NProgress.done();
 						}, 300);
 					} else {
 						// If no content found, restore original
 						appElement.innerHTML = originalContent;
-						window.dispatchEvent(new Event('navigationEnd'));
+						NProgress.done();
 					}
 				} catch (error) {
 					console.error('Navigation error:', error);
-					// Dispatch navigation end event for loading bar
-					window.dispatchEvent(new Event('navigationEnd'));
+					NProgress.done();
 				}
 			}
 		</script>
@@ -126,6 +137,10 @@ const { title, description = "A simple hello page with dynamic content from Supa
 			white 60%
 		);
 	}
+	html {
+		font-family: system-ui, sans-serif;
+		background: #13151a;
+	}
 	code {
 		font-family:
 			Menlo,
@@ -137,8 +152,30 @@ const { title, description = "A simple hello page with dynamic content from Supa
 			Courier New,
 			monospace;
 	}
+	nav {
+		background-color: rgba(var(--accent-dark), 80%);
+		padding: 1rem;
+		margin-bottom: 2rem;
+	}
+	nav ul {
+		display: flex;
+		gap: 2rem;
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		justify-content: center;
+	}
+	nav a {
+		color: white;
+		text-decoration: none;
+		font-weight: bold;
+		transition: color 0.2s ease;
+	}
+	nav a:hover {
+		color: rgb(var(--accent-light));
+	}
 	
-	/* Add animation for skeleton loading */
+	/* Animation for skeleton loading */
 	@keyframes pulse {
 		0%, 100% {
 			opacity: 0.5;
