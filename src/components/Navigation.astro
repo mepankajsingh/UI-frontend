@@ -1,37 +1,91 @@
 ---
 ---
 
-<header class="bg-gray-900 text-white shadow-md">
-  <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between h-16">
-      <div class="flex items-center">
-        <div class="flex-shrink-0 flex items-center">
-          <a href="/" class="text-xl font-bold text-white">
-            <span class="text-indigo-400"><</span>UI<span class="text-indigo-400">/></span> Collection
-          </a>
-        </div>
-        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-          <a href="/frameworks" class="border-transparent text-gray-300 hover:border-indigo-400 hover:text-white inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-            frameworks
-          </a>
-          <a href="/libraries" class="border-transparent text-gray-300 hover:border-indigo-400 hover:text-white inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-            libraries
-          </a>
-          <a href="/tags" class="border-transparent text-gray-300 hover:border-indigo-400 hover:text-white inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-            tags
-          </a>
-          <a href="/about" class="border-transparent text-gray-300 hover:border-indigo-400 hover:text-white inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-            about
-          </a>
-        </div>
-      </div>
-      <div class="flex items-center">
-        <a href="/search" class="text-gray-300 hover:text-white p-1">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </a>
-      </div>
-    </div>
-  </nav>
-</header>
+<nav id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white shadow-md flex flex-col z-10">
+  <div class="p-4 border-b border-gray-800 flex items-center">
+    <a href="/" class="text-lg font-bold text-white">
+      <span class="text-indigo-400"><</span><span class="text-indigo-400">/></span>
+      <span class="ml-2">UI Library Directory</span>
+    </a>
+  </div>
+  <div class="flex flex-col flex-grow p-4 space-y-2 overflow-y-auto">
+    <a href="/frameworks" class="text-gray-300 hover:text-white hover:bg-gray-800 p-2 rounded-md flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+      <span class="text-sm">Frameworks</span>
+    </a>
+    <a href="/libraries" class="text-gray-300 hover:text-white hover:bg-gray-800 p-2 rounded-md flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+      </svg>
+      <span class="text-sm">Libraries</span>
+    </a>
+    <a href="/tags" class="text-gray-300 hover:text-white hover:bg-gray-800 p-2 rounded-md flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+      </svg>
+      <span class="text-sm">Tags</span>
+    </a>
+    <a href="/about" class="text-gray-300 hover:text-white hover:bg-gray-800 p-2 rounded-md flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span class="text-sm">About</span>
+    </a>
+  </div>
+  <div class="p-4 border-t border-gray-800">
+    <a href="/search" class="text-gray-300 hover:text-white p-2 rounded-md flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <span class="text-sm">Search</span>
+    </a>
+  </div>
+</nav>
+
+<!-- Mobile menu button -->
+<div class="fixed top-0 left-0 z-20 p-4 md:hidden">
+  <button id="mobile-menu-button" class="text-gray-800 hover:text-gray-600 focus:outline-none">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+</div>
+
+<script>
+  // Function to handle mobile menu
+  function initMobileMenu() {
+    const sidebar = document.getElementById('sidebar');
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    
+    // Mobile menu toggle
+    if (mobileMenuButton && sidebar) {
+      mobileMenuButton.addEventListener('click', () => {
+        sidebar.classList.toggle('-translate-x-full');
+      });
+    }
+
+    // Hide menu by default on mobile
+    if (window.innerWidth < 768 && sidebar) {
+      sidebar.classList.add('-translate-x-full');
+    }
+  }
+
+  // Initialize mobile menu on page load
+  document.addEventListener('DOMContentLoaded', initMobileMenu);
+  
+  // Re-initialize mobile menu after page transitions
+  document.addEventListener('astro:page-load', initMobileMenu);
+  
+  // Also initialize immediately when script runs to handle view transitions
+  initMobileMenu();
+</script>
+
+<style>
+  @media (max-width: 768px) {
+    nav {
+      transition: transform 0.3s ease-in-out;
+    }
+  }
+</style>

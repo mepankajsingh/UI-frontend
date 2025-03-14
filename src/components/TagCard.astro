@@ -1,33 +1,24 @@
 ---
 interface Props {
   tag: {
-    id: string;
+    id: number;
     name: string;
     slug: string;
-    description?: string;
-    libraryCount: number;
+    count?: number;
   };
 }
 
 const { tag } = Astro.props;
 ---
 
-<a href={`/tags/${tag.slug}`} class="block h-full">
-  <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-4 hover:shadow-md transition-all duration-200 h-full flex flex-col">
-    <div class="flex justify-between items-start mb-2">
-      <h3 class="text-lg font-medium text-primary-text">{tag.name}</h3>
-      <span class="text-xs text-primary bg-primary-bg px-2 py-0.5 rounded">
-        {tag.libraryCount} {tag.libraryCount === 1 ? 'library' : 'libraries'}
-      </span>
-    </div>
-    
-    {tag.description && (
-      <p class="text-sm text-secondary-text mb-3 line-clamp-2 flex-grow">{tag.description}</p>
-    )}
-    
-    {!tag.description && (
-      <p class="text-sm text-secondary-text mb-3 line-clamp-2 flex-grow">
-        UI libraries tagged with {tag.name}
+<a href={`/tags/${tag.slug}`} class="block group">
+  <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+    <h3 class="text-base font-medium text-gray-900 group-hover:text-indigo-600">
+      {tag.name}
+    </h3>
+    {tag.count !== undefined && (
+      <p class="text-sm text-gray-500 mt-1">
+        {tag.count} {tag.count === 1 ? 'library' : 'libraries'}
       </p>
     )}
   </div>

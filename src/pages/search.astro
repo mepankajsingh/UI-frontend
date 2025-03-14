@@ -1,76 +1,31 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import LibraryCard from '../components/LibraryCard.astro';
-import SearchBar from '../components/SearchBar.jsx';
-import { supabase } from '../lib/supabase';
+import SearchBar from '../components/SearchBar';
 
 export const prerender = false;
-
-// Get search query from URL
-const query = Astro.url.searchParams.get('q') || '';
-
-// Search libraries if query exists
-let libraries = [];
-if (query) {
-  const { data } = await supabase
-    .from('libraries')
-    .select(`
-      *,
-      framework:framework_id(id, name, slug),
-      tags:library_tags(tag_id(id, name, slug))
-    `)
-    .or(`name.ilike.%${query}%, description.ilike.%${query}%`)
-    .order('github_stars', { ascending: false });
-  
-  libraries = data || [];
-}
 ---
 
-<Layout title={query ? `Search results for "${query}" - UI Library Directory` : 'Search - UI Library Directory'}>
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-4">Search UI Libraries</h1>
-      <div class="max-w-2xl">
-        <SearchBar initialQuery={query} client:load />
-      </div>
+<Layout title="Search - UI Library Directory">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Search</h1>
+      <p class="mt-2 text-sm text-gray-600">
+        Find UI component libraries by name, framework, or tag
+      </p>
     </div>
 
-    {query && (
-      <div class="mt-8">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">
-          {libraries.length > 0 
-            ? `Found ${libraries.length} ${libraries.length === 1 ? 'result' : 'results'} for "${query}"`
-            : `No results found for "${query}"`}
-        </h2>
-        
-        {libraries.length > 0 ? (
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {libraries.map(library => (
-              <LibraryCard library={library} />
-            ))}
-          </div>
-        ) : (
-          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <p class="text-gray-600 mb-4">
-              We couldn't find any libraries matching your search. Try:
-            </p>
-            <ul class="list-disc pl-5 text-gray-600 space-y-1">
-              <li>Using different keywords</li>
-              <li>Checking for typos</li>
-              <li>Using more general terms</li>
-              <li>Browsing libraries by framework instead</li>
-            </ul>
-          </div>
-        )}
-      </div>
-    )}
-    
-    {!query && (
-      <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-        <p class="text-gray-600">
-          Enter a search term above to find UI libraries.
-        </p>
-      </div>
-    )}
+    <div class="mb-8">
+      <SearchBar client:load />
+    </div>
+
+    <div class="text-center py-8">
+      <p class="text-gray-500 text-sm">Enter a search term to find libraries</p>
+      <a 
+        href="/" 
+        class="inline-flex items-center px-3 py-1.5 mt-4 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+      >
+        Back to home
+      </a>
+    </div>
   </main>
 </Layout>

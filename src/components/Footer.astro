@@ -1,0 +1,71 @@
+---
+const currentYear = new Date().getFullYear();
+---
+
+<footer class={`bg-gray-50 border-t border-gray-200 ${Astro.props.class || ''}`}>
+  <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <!-- Logo and description -->
+      <div>
+        <div class="flex items-center">
+          <a href="/" class="text-xl font-bold text-gray-900">
+            <span class="text-indigo-600"><</span>UI<span class="text-indigo-600">/></span> Collection
+          </a>
+        </div>
+        <p class="mt-4 text-sm text-gray-600">
+          Find the perfect UI component library for your next JavaScript project.
+        </p>
+      </div>
+      
+      <!-- Quick links -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 tracking-wider uppercase">Resources</h3>
+        <ul class="mt-4 space-y-2">
+          <li>
+            <a href="/frameworks" class="text-sm text-gray-600 hover:text-indigo-600">
+              Frameworks
+            </a>
+          </li>
+          <li>
+            <a href="/libraries" class="text-sm text-gray-600 hover:text-indigo-600">
+              Libraries
+            </a>
+          </li>
+          <li>
+            <a href="/tags" class="text-sm text-gray-600 hover:text-indigo-600">
+              Tags
+            </a>
+          </li>
+          <li>
+            <a href="/search" class="text-sm text-gray-600 hover:text-indigo-600">
+              Search
+            </a>
+          </li>
+        </ul>
+      </div>
+      
+      <!-- About and contact -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 tracking-wider uppercase">Company</h3>
+        <ul class="mt-4 space-y-2">
+          <li>
+            <a href="/about" class="text-sm text-gray-600 hover:text-indigo-600">
+              About Us
+            </a>
+          </li>
+          <li>
+            <a href="/contact" class="text-sm text-gray-600 hover:text-indigo-600">
+              Contact
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="mt-8 pt-8 border-t border-gray-200">
+      <p class="text-center text-sm text-gray-500">
+        &copy; {currentYear} UI Library Directory. All rights reserved.
+      </p>
+    </div>
+  </div>
+</footer>

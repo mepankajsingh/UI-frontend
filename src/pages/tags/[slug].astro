@@ -8,58 +8,60 @@ export const prerender = false;
 const { slug } = Astro.params;
 
 // Get tag details
-const { data: tag, error: tagError } = await supabase
+const { data: tag } = await supabase
   .from('tags')
   .select('*')
   .eq('slug', slug)
   .single();
 
-// Handle 404
-if (tagError && tagError.code === 'PGRST116') {
+// If tag not found, return 404
+if (!tag) {
   return Astro.redirect('/404');
 }
 
 // Get libraries with this tag
-const { data: libraries, error: librariesError } = await supabase
+const { data: libraryTags } = await supabase
   .from('library_tags')
   .select(`
+    library_id,
     library:library_id(
       *,
       framework:framework_id(id, name, slug),
       tags:library_tags(tag_id(id, name, slug))
     )
   `)
-  .eq('tag_id', tag?.id || 0);
+  .eq('tag_id', tag.id);
 
-// Process libraries to remove nesting
-const processedLibraries = libraries?.map(item => item.library) || [];
+// Extract libraries from the join table
+const libraries = libraryTags?.map(lt => lt.library) || [];
 ---
 
-<Layout title={tag ? `${tag.name} UI Libraries - UI Library Directory` : 'Loading...'}>
+<Layout title={`${tag.name} UI Libraries - UI Library Directory`}>
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    {tag && (
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">{tag.name}</h1>
-        <p class="text-lg text-gray-600">
-          UI libraries and components tagged with {tag.name}
-        </p>
-      </div>
-    )}
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 mr-2">
+          {tag.name}
+        </span>
+        UI Libraries
+      </h1>
+      <p class="text-lg text-gray-600">
+        Component libraries and design systems tagged with "{tag.name}"
+      </p>
+    </div>
 
-    {processedLibraries && (
+    {libraries && libraries.length > 0 ? (
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {processedLibraries.map(library => (
+        {libraries.map(library => (
           <LibraryCard library={library} />
         ))}
-        
-        {processedLibraries.length === 0 && (
-          <div class="col-span-3 py-12 text-center">
-            <h3 class="text-lg font-medium text-gray-900 mb-1">No libraries found</h3>
-            <p class="text-gray-500">
-              We don't have any libraries with this tag yet.
-            </p>
-          </div>
-        )}
+      </div>
+    ) : (
+      <div class="text-center py-12 bg-white border border-gray-200 rounded-lg">
+        <h3 class="text-lg font-medium text-gray-900 mb-1">No libraries found</h3>
+        <p class="<boltAction type="file" filePath="src/pages/tags/[slug].astro">        <p class="text-gray-500">
+          We don't have any component libraries tagged with "{tag.name}" yet.
+        </p>
       </div>
     )}
   </main>
