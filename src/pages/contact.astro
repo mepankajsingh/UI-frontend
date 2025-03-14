@@ -9,41 +9,13 @@ const pageData = await getPageData('contact');
 ---
 
 <Layout title={pageData.title}>
-  <main>
-    <h1>{pageData.title}</h1>
-    <div class="content">
+  <main class="mx-auto p-6 max-w-3xl">
+    <h1 class="text-5xl font-bold leading-tight text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-accent via-accent-light to-white bg-[length:400%] bg-[0%]">
+      {pageData.title}
+    </h1>
+    <div class="mb-8 border border-accent-light/25 bg-gradient-to-b from-accent-dark/66 to-accent-dark/33 p-6 rounded-lg text-xl leading-relaxed">
       {pageData.content}
     </div>
     <ContactForm client:load />
   </main>
 </Layout>
-
-<style>
-  main {
-    margin: auto;
-    padding: 1.5rem;
-    max-width: 800px;
-    color: white;
-  }
-  h1 {
-    font-size: 3rem;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
-    margin-bottom: 1em;
-    background-image: var(--accent-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-size: 400%;
-    background-position: 0%;
-  }
-  .content {
-    margin-bottom: 2rem;
-    border: 1px solid rgba(var(--accent-light), 25%);
-    background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
-    padding: 1.5rem;
-    border-radius: 8px;
-    font-size: 1.2rem;
-    line-height: 1.6;
-  }
-</style>

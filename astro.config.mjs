@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config';
 import netlify from '@astrojs/netlify';
 import react from '@astrojs/react';
 import vue from '@astrojs/vue';
+import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
@@ -13,5 +14,5 @@ export default defineConfig({
       expiration: 60 * 60 * 24,
     }
   }),
-  integrations: [react(), vue()]
+  integrations: [react(), vue(), tailwind()]
 });

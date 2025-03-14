@@ -26,18 +26,18 @@ export default function ContactForm() {
   };
 
   return (
-    <div className="contact-form">
-      <h2>Get in Touch</h2>
+    <div className="mt-8">
+      <h2 className="text-2xl font-bold mb-6 text-white">Get in Touch</h2>
       
       {status === 'success' && (
-        <div className="success-message">
+        <div className="bg-green-900/20 border border-green-500/30 text-green-300 p-4 rounded mb-6">
           Thank you for your message! We'll get back to you soon.
         </div>
       )}
       
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="name">Name</label>
+        <div className="mb-6">
+          <label htmlFor="name" className="block mb-2 text-white">Name</label>
           <input
             type="text"
             id="name"
@@ -45,11 +45,12 @@ export default function ContactForm() {
             value={formData.name}
             onChange={handleChange}
             required
+            className="w-full p-3 rounded border border-accent-light/50 bg-white/10 text-white text-base"
           />
         </div>
         
-        <div className="form-group">
-          <label htmlFor="email">Email</label>
+        <div className="mb-6">
+          <label htmlFor="email" className="block mb-2 text-white">Email</label>
           <input
             type="email"
             id="email"
@@ -57,11 +58,12 @@ export default function ContactForm() {
             value={formData.email}
             onChange={handleChange}
             required
+            className="w-full p-3 rounded border border-accent-light/50 bg-white/10 text-white text-base"
           />
         </div>
         
-        <div className="form-group">
-          <label htmlFor="message">Message</label>
+        <div className="mb-6">
+          <label htmlFor="message" className="block mb-2 text-white">Message</label>
           <textarea
             id="message"
             name="message"
@@ -69,78 +71,18 @@ export default function ContactForm() {
             onChange={handleChange}
             rows="5"
             required
+            className="w-full p-3 rounded border border-accent-light/50 bg-white/10 text-white text-base"
           ></textarea>
         </div>
         
         <button 
           type="submit" 
           disabled={status === 'submitting'}
+          className="bg-gradient-to-r from-accent to-accent-light bg-[length:200%] bg-[0%] text-white border-none py-3 px-6 rounded text-base cursor-pointer transition-all hover:bg-[100%] disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {status === 'submitting' ? 'Sending...' : 'Send Message'}
         </button>
       </form>
-      
-      <style jsx>{`
-        .contact-form {
-          margin-top: 2rem;
-        }
-        
-        h2 {
-          color: white;
-          margin-bottom: 1.5rem;
-        }
-        
-        .form-group {
-          margin-bottom: 1.5rem;
-        }
-        
-        label {
-          display: block;
-          margin-bottom: 0.5rem;
-          color: white;
-        }
-        
-        input, textarea {
-          width: 100%;
-          padding: 0.75rem;
-          border-radius: 4px;
-          border: 1px solid rgba(var(--accent-light), 50%);
-          background-color: rgba(255, 255, 255, 0.1);
-          color: white;
-          font-size: 1rem;
-        }
-        
-        button {
-          background-image: var(--accent-gradient);
-          background-size: 200%;
-          background-position: 0%;
-          color: white;
-          border: none;
-          padding: 0.75rem 1.5rem;
-          border-radius: 4px;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: background-position 0.3s ease;
-        }
-        
-        button:hover {
-          background-position: 100%;
-        }
-        
-        button:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-        
-        .success-message {
-          background-color: rgba(0, 255, 0, 0.1);
-          border: 1px solid rgba(0, 255, 0, 0.3);
-          color: lightgreen;
-          padding: 1rem;
-          border-radius: 4px;
-          margin-bottom: 1.5rem;
-        }
-      `}</style>
     </div>
   );
 }
