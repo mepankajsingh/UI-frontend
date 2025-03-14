@@ -13,11 +13,11 @@ const { tag } = Astro.props;
 
 <a href={`/tags/${tag.slug}`} class="block group">
   <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
-    <h3 class="text-base font-medium text-gray-900 group-hover:text-indigo-600">
+    <h3 class="text-sm font-medium text-gray-900 group-hover:text-indigo-600">
       {tag.name}
     </h3>
     {tag.count !== undefined && (
-      <p class="text-sm text-gray-500 mt-1">
+      <p class="text-xs text-gray-500 mt-1">
         {tag.count} {tag.count === 1 ? 'library' : 'libraries'}
       </p>
     )}

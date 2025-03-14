@@ -38,14 +38,14 @@ const libraries = libraryTags?.map(lt => lt.library) || [];
 
 <Layout title={`${tag.name} UI Libraries - UI Library Directory`}>
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900 mb-2">
         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 mr-2">
           {tag.name}
         </span>
         UI Libraries
       </h1>
-      <p class="text-lg text-gray-600">
+      <p class="text-sm text-gray-600">
         Component libraries and design systems tagged with "{tag.name}"
       </p>
     </div>
@@ -57,9 +57,9 @@ const libraries = libraryTags?.map(lt => lt.library) || [];
         ))}
       </div>
     ) : (
-      <div class="text-center py-12 bg-white border border-gray-200 rounded-lg">
-        <h3 class="text-lg font-medium text-gray-900 mb-1">No libraries found</h3>
-        <p class="<boltAction type="file" filePath="src/pages/tags/[slug].astro">        <p class="text-gray-500">
+      <div class="text-center py-8 bg-white border border-gray-200 rounded-lg">
+        <h3 class="text-base font-medium text-gray-900 mb-1">No libraries found</h3>
+        <p class="text-sm text-gray-500">
           We don't have any component libraries tagged with "{tag.name}" yet.
         </p>
       </div>
