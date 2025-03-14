@@ -1,0 +1,88 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import LibraryCard from '../../components/LibraryCard.astro';
+import { getFrameworkBySlug, getLibrariesByFramework } from '../../lib/supabase';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const framework = await getFrameworkBySlug(slug);
+const libraries = await getLibrariesByFramework(framework?.id);
+
+if (!framework) {
+  return Astro.redirect('/404');
+}
+---
+
+<Layout title={`${framework.title || framework.name} UI Libraries - UI Library Directory`} description={framework.description}>
+  <main class="mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+    <!-- Header Section - More compact -->
+    <div class="mb-4">
+      <div class="flex items-center gap-3 mb-2">
+        {framework.logo_url && (
+          <img 
+            src={framework.logo_url} 
+            alt={`${framework.name} logo`} 
+            class="w-12 h-12 object-contain"
+          />
+        )}
+        <h1 class="text-2xl font-bold leading-tight text-gray-900">
+          {framework.title || framework.name}
+        </h1>
+      </div>
+      
+      <p class="text-base text-gray-600 mb-3">
+        {framework.description}
+      </p>
+      
+      <!-- Tags Section - More compact -->
+      <div class="flex flex-wrap gap-1 mb-3">
+        {framework.tags && framework.tags.map(tag => (
+          <a 
+            href={`/tags/${tag.tag_id.slug}`}
+            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200"
+          >
+            {tag.tag_id.name}
+          </a>
+        ))}
+      </div>
+      
+      <!-- Action Buttons - More compact -->
+      <div class="flex gap-2 mb-4">
+        <a 
+          href={framework.website_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-indigo-500"
+          data-external
+        >
+          Website
+        </a>
+        <a 
+          href={framework.github_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-indigo-500"
+          data-external
+        >
+          GitHub
+        </a>
+      </div>
+    </div>
+    
+    <!-- Libraries Section - More compact -->
+    <h2 class="text-lg font-bold mb-3 text-gray-900">UI Libraries for {framework.name}</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {libraries && libraries.map(library => (
+        <LibraryCard library={library} />
+      ))}
+      
+      {libraries && libraries.length === 0 && (
+        <p class="col-span-3 text-center py-4 text-gray-500">
+          No libraries found for this framework yet.
+        </p>
+      )}
+    </div>
+  </main>
+</Layout>

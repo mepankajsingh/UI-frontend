@@ -1,0 +1,262 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getLibraryBySlug } from '../../lib/supabase';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+const library = await getLibraryBySlug(slug);
+
+if (!library) {
+  return Astro.redirect('/404');
+}
+
+// Format numbers with commas
+const formatNumber = (num) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+// Format date to readable format
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+};
+---
+
+<Layout title={`${library.name} - UI Library Directory`} description={library.description}>
+  <main class="mx-auto px-4 sm:px-6 lg:px-8 py-6 max-w-7xl">
+    <!-- Header Section - Developer style -->
+    <div class="mb-6 border-b border-gray-200 pb-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div class="flex items-center gap-3">
+          {library.icon_url && (
+            <img 
+              src={library.icon_url} 
+              alt={`${library.name} logo`} 
+              class="w-10 h-10 object-contain"
+            />
+          )}
+          <div>
+            <h1 class="text-2xl font-bold leading-tight text-gray-900">
+              {library.name}
+              <span class="text-sm font-normal text-gray-500 ml-2">{library.latest_version || ''}</span>
+            </h1>
+            <p class="text-sm text-gray-600">
+              {library.description}
+            </p>
+          </div>
+        </div>
+        
+        <a 
+          href={`/frameworks/${library.framework.slug}`}
+          class="inline-flex items-center px-2 py-1 rounded-md text-sm bg-gray-100 text-gray-800 hover:bg-gray-200"
+        >
+          {library.framework.name}
+        </a>
+      </div>
+      
+      <!-- Tags Section - Developer style -->
+      <div class="flex flex-wrap gap-1 mt-3">
+        {library.tags && library.tags.map(tag => (
+          <a 
+            href={`/tags/${tag.tag_id.slug}`}
+            class="tag inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100"
+          >
+            {tag.tag_id.name}
+          </a>
+        ))}
+      </div>
+    </div>
+    
+    <!-- Action Buttons - Developer style -->
+    <div class="flex flex-wrap gap-2 mb-6">
+      {library.website_url && (
+        <a 
+          href={library.website_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-indigo-500"
+          data-external
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+          </svg>
+          Website
+        </a>
+      )}
+      
+      {library.github_url && (
+        <a 
+          href={library.github_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-indigo-500"
+          data-external
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill<boltAction type="file" filePath="src/pages/libraries/[slug].astro">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="<boltAction type="file" filePath="src/pages/libraries/[slug].astro">
+            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+          </svg>
+          GitHub
+        </a>
+      )}
+      
+      {library.npm_url && (
+        <a 
+          href={library.npm_url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-indigo-500"
+          data-external
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M0 0v24h24V0H0zm12 18.75h-1.5V6h-3v12.75H3V4.5h9v14.25zm1.5-14.25V21h3v-4.5h3v4.5h3V4.5h-9z"/>
+          </svg>
+          NPM
+        </a>
+      )}
+    </div>
+    
+    <!-- Stats Section - Developer style -->
+    <div class="mb-6 bg-gray-50 border border-gray-200 rounded-md overflow-hidden">
+      <div class="px-4 py-2 bg-gray-100 border-b border-gray-200">
+        <h2 class="text-sm font-bold text-gray-700">Library Stats</h2>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 p-4">
+        <div>
+          <h3 class="text-xs font-medium text-gray-500">GitHub Stars</h3>
+          <p class="text-lg font-bold stats-value text-gray-900">{formatNumber(library.github_stars)}</p>
+        </div>
+        
+        <div>
+          <h3 class="text-xs font-medium text-gray-500">NPM Downloads</h3>
+          <p class="text-lg font-bold stats-value text-gray-900">{formatNumber(library.npm_downloads)}</p>
+        </div>
+        
+        <div>
+          <h3 class="text-xs font-medium text-gray-500">Latest Version</h3>
+          <p class="text-lg font-bold stats-value text-gray-900">{library.latest_version || 'N/A'}</p>
+        </div>
+        
+        <div>
+          <h3 class="text-xs font-medium text-gray-500">Last Updated</h3>
+          <p class="text-sm font-bold stats-value text-gray-900">{formatDate(library.last_update)}</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Library Details - Developer style -->
+    <div class="mb-6 bg-gray-50 border border-gray-200 rounded-md overflow-hidden">
+      <div class="px-4 py-2 bg-gray-100 border-b border-gray-200">
+        <h2 class="text-sm font-bold text-gray-700">Library Details</h2>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 p-4">
+        {library.pricing && (
+          <div>
+            <h3 class="text-xs font-medium text-gray-500">Pricing</h3>
+            <p class="text-sm font-medium text-gray-900 capitalize">{library.pricing}</p>
+          </div>
+        )}
+        
+        {library.customization && (
+          <div>
+            <h3 class="text-xs font-medium text-gray-500">Customization</h3>
+            <p class="text-sm font-medium text-gray-900 capitalize">{library.customization}</p>
+          </div>
+        )}
+        
+        {library.styling && (
+          <div>
+            <h3 class="text-xs font-medium text-gray-500">Styling</h3>
+            <p class="text-sm font-medium text-gray-900 capitalize">{library.styling}</p>
+          </div>
+        )}
+        
+        {library.total_components !== undefined && (
+          <div>
+            <h3 class="text-xs font-medium text-gray-500">Components</h3>
+            <p class="text-sm font-medium text-gray-900">{library.total_components}</p>
+          </div>
+        )}
+      </div>
+    </div>
+    
+    <!-- Installation Section - Developer style -->
+    {library.installation && (
+      <div class="mb-6">
+        <div class="code-block">
+          <div class="code-block-header">
+            <span>Installation</span>
+            <span>npm | yarn</span>
+          </div>
+          <pre class="text-gray-100 font-mono text-xs">{library.installation}</pre>
+        </div>
+      </div>
+    )}
+    
+    <!-- Features Section - Developer style -->
+    {library.features && (
+      <div class="mb-6 bg-white border border-gray-200 rounded-md overflow-hidden">
+        <div class="px-4 py-2 bg-gray-100 border-b border-gray-200">
+          <h2 class="text-sm font-bold text-gray-700">Features</h2>
+        </div>
+        <div class="p-4">
+          <div class="prose prose-sm prose-indigo max-w-none text-gray-600">
+            {library.features}
+          </div>
+        </div>
+      </div>
+    )}
+    
+    <!-- Gallery Images - Developer style -->
+    {library.gallery_images && library.gallery_images.length > 0 && (
+      <div class="mb-6 bg-white border border-gray-200 rounded-md overflow-hidden">
+        <div class="px-4 py-2 bg-gray-100 border-b border-gray-200">
+          <h2 class="text-sm font-bold text-gray-700">Gallery</h2>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 p-4">
+          {library.gallery_images.map(image => (
+            <div class="bg-gray-50 p-1 rounded-lg border border-gray-100">
+              <img 
+                src={image.url} 
+                alt={image.alt || `${library.name} screenshot`} 
+                class="w-full h-auto rounded"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+    
+    <!-- GitHub Stats - Developer style -->
+    {library.github_forks !== undefined && (
+      <div class="mb-6 bg-gray-50 border border-gray-200 rounded-md overflow-hidden">
+        <div class="px-4 py-2 bg-gray-100 border-b border-gray-200">
+          <h2 class="text-sm font-bold text-gray-700">GitHub Stats</h2>
+        </div>
+        <div class="grid grid-cols-3 gap-2 p-4">
+          <div>
+            <h3 class="text-xs font-medium text-gray-500">Stars</h3>
+            <p class="text-sm font-bold stats-value text-gray-900">{formatNumber(library.github_stars)}</p>
+          </div>
+          
+          <div>
+            <h3 class="text-xs font-medium text-gray-500">Forks</h3>
+            <p class="text-sm font-bold stats-value text-gray-900">{formatNumber(library.github_forks)}</p>
+          </div>
+          
+          <div>
+            <h3 class="text-xs font-medium text-gray-500">Last Updated</h3>
+            <p class="text-xs font-bold stats-value text-gray-900">{formatDate(library.last_update)}</p>
+          </div>
+        </div>
+      </div>
+    )}
+  </main>
+</Layout>

@@ -1,21 +1,139 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getPageData } from '../lib/supabase';
+import Card from '../components/Card.astro';
+import FrameworkCard from '../components/<boltAction type="file" filePath="src/pages/index.astro">
+import Layout from '../layouts/Layout.astro';
+import Card from '../components/Card.astro';
+import FrameworkCard from '../components/FrameworkCard.astro';
+import LibraryCard from '../components/LibraryCard.astro';
+import { supabase } from '../lib/supabase';
 
-// This enables ISR - the page will be generated at build time
-// and then revalidated according to the ISR settings
 export const prerender = false;
 
-const pageData = await getPageData('home');
+// Get top frameworks
+const { data: topFrameworks } = await supabase
+  .from('frameworks')
+  .select('*')
+  .order('github_stars', { ascending: false })
+  .limit(6);
+
+// Get top libraries
+const { data: topLibraries } = await supabase
+  .from('libraries')
+  .select(`
+    *,
+    framework:framework_id(id, name, slug),
+    tags:library_tags(tag_id(id, name, slug))
+  `)
+  .order('github_stars', { ascending: false })
+  .limit(6);
+
+// Get popular tags
+const { data: popularTags } = await supabase
+  .from('tags')
+  .select('*, library_tags(library_id)')
+  .order('name')
+  .limit(10);
+
+// Count libraries for each tag
+if (popularTags) {
+  popularTags.forEach(tag => {
+    tag.libraryCount = tag.library_tags ? tag.library_tags.length : 0;
+  });
+  
+  // Sort by library count
+  popularTags.sort((a, b) => b.libraryCount - a.libraryCount);
+}
 ---
 
-<Layout title={pageData.title}>
-  <main class="mx-auto p-6 max-w-3xl">
-    <h1 class="text-5xl font-bold leading-tight text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-[rgb(136,58,234)] via-[rgb(224,204,250)] to-white bg-[length:400%] bg-[0%]">
-      {pageData.title}
-    </h1>
-    <div class="mb-8 border border-[rgba(224,204,250,0.25)] bg-gradient-to-b from-[rgba(49,10,101,0.66)] to-[rgba(49,10,101,0.33)] p-6 rounded-lg text-xl leading-relaxed">
-      {pageData.content}
+<Layout title="UI Library Directory - Find the Best UI Component Libraries">
+  <main>
+    <!-- Hero Section - Developer style -->
+    <div class="bg-gray-900 py-16 text-white">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h1 class="text-3xl sm:text-4xl font-bold mb-4">
+          <span class="text-indigo-400"><</span>Find the Perfect UI<span class="text-indigo-400">/></span>
+        </h1>
+        <p class="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+          Compare top UI frameworks, component libraries, and design systems for your next project.
+        </p>
+        <div class="flex flex-wrap justify-center gap-3">
+          <a href="/frameworks" class="inline-flex items-center px-5 py-2 border border-transparent text-base rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+            Browse Frameworks
+          </a>
+          <a href="/libraries" class="inline-flex items-center px-5 py-2 border border-gray-700 text-base rounded-md shadow-sm text-gray-300 bg-gray-800 hover:bg-gray-700">
+            Explore Libraries
+          </a>
+        </div>
+      </div>
     </div>
+
+    <!-- Top Frameworks Section -->
+    <section class="py-10 bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-xl font-bold text-gray-900">
+            <span class="text-indigo-500">import</span> <span class="text-gray-900">PopularFrameworks</span> <span class="text-indigo-500">from</span> <span class="text-green-600">'ui-collection'</span>;
+          </h2>
+          <a href="/frameworks" class="text-indigo-600 hover:text-indigo-800 text-sm">
+            view_all();
+          </a>
+        </div>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {topFrameworks && topFrameworks.map(framework => (
+            <FrameworkCard framework={framework} />
+          ))}
+        </div>
+      </div>
+    </section>
+    
+    <!-- Top Libraries Section -->
+    <section class="py-10 bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-xl font-bold text-gray-900">
+            <span class="text-indigo-500">import</span> <span class="text-gray-900">PopularLibraries</span> <span class="text-indigo-500">from</span> <span class="text-green-600">'ui-collection'</span>;
+          </h2>
+          <a href="/libraries" class="text-indigo-600 hover:text-indigo-800 text-sm">
+            view_all();
+          </a>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {topLibraries && topLibraries.map(library => (
+            <LibraryCard library={library} />
+          ))}
+        </div>
+      </div>
+    </section>
+    
+    <!-- Popular Tags Section -->
+    <section class="py-10 bg-gray-50">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-xl font-bold text-gray-900">
+            <span class="text-indigo-500">const</span> <span class="text-gray-900">categories</span> <span class="text-indigo-500">=</span> <span class="text-gray-900">getTags()</span>;
+          </h2>
+          <a href="/tags" class="text-indigo-600 hover:text-indigo-800 text-sm">
+            view_all();
+          </a>
+        </div>
+        
+        <div class="flex flex-wrap gap-2">
+          {popularTags && popularTags.map(tag => (
+            <a 
+              href={`/tags/${tag.slug}`}
+              class="tag inline-flex items-center px-3 py-1 rounded-md text-sm bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-200"
+            >
+              {tag.name}
+              <span class="ml-1 bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded-full text-xs">
+                {tag.libraryCount}
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
   </main>
 </Layout>

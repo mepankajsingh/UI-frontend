@@ -1,0 +1,31 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import FrameworkCard from '../../components/FrameworkCard.astro';
+import { supabase } from '../../lib/supabase';
+
+export const prerender = false;
+
+const { data: frameworks } = await supabase
+  .from('frameworks')
+  .select('*')
+  .order('github_stars', { ascending: false });
+---
+
+<Layout title="JavaScript Frameworks - UI Library Directory">
+  <main class="mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-7xl">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        JavaScript Frameworks
+      </h1>
+      <p class="text-lg text-gray-600">
+        Explore popular JavaScript frameworks and their ecosystems
+      </p>
+    </div>
+    
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      {frameworks && frameworks.map(framework => (
+        <FrameworkCard framework={framework} />
+      ))}
+    </div>
+  </main>
+</Layout>

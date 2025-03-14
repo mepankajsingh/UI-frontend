@@ -4,9 +4,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        accent: 'rgb(136, 58, 234)',
-        'accent-light': 'rgb(224, 204, 250)',
-        'accent-dark': 'rgb(49, 10, 101)',
+        primary: '#6366f1', // Indigo-500
+        'primary-light': '#818cf8', // Indigo-400
+        'primary-dark': '#4f46e5', // Indigo-600
+        'primary-bg': '#f9fafb', // Gray-50
+        'primary-text': '#1f2937', // Gray-800
+        'secondary-text': '#4b5563', // Gray-600
       },
       animation: {
         pulse: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
