@@ -10,10 +10,14 @@ interface Props {
     github_stars?: number;
     npm_downloads?: number;
     npm_package_name?: string;
-    framework?: {
-      name: string;
-      slug: string;
-    };
+    total_components?: number;
+    frameworks?: {
+      framework_id: {
+        name: string;
+        slug: string;
+      };
+      is_primary: boolean;
+    }[];
     tags?: {
       tag_id: {
         name: string;
@@ -38,8 +42,10 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-// Get tags (limit to 2 for display)
-const tags = library.tags ? library.tags.slice(0, 2).map(t => t.tag_id) : [];
+// Get frameworks to display (primary first, then others, limit to 2)
+const frameworksToDisplay = library.frameworks 
+  ? [...library.frameworks].sort((a, b) => (a.is_primary ? -1 : 1)).slice(0, 2)
+  : [];
 ---
 
 <a href={`/libraries/${library.slug}`} class="block group">
@@ -57,10 +63,22 @@ const tags = library.tags ? library.tags.slice(0, 2).map(t => t.tag_id) : [];
         <h3 class="text-sm font-medium text-gray-900 group-hover:text-indigo-600 truncate">
           {library.name}
         </h3>
-        {library.framework && (
-          <p class="text-xs text-gray-500 truncate">
-            {library.framework.name}
-          </p>
+        {frameworksToDisplay.length > 0 && (
+          <div class="flex items-center gap-1 flex-wrap">
+            {frameworksToDisplay.map((fw, index) => (
+              <>
+                <span class="text-xs text-gray-500 truncate">
+                  {fw.framework_id.name}
+                </span>
+                {index < frameworksToDisplay.length - 1 && (
+                  <span class="text-xs text-gray-400">•</span>
+                )}
+              </>
+            ))}
+            {library.frameworks && library.frameworks.length > 2 && (
+              <span class="text-xs text-gray-400">+{library.frameworks.length - 2}</span>
+            )}
+          </div>
         )}
       </div>
       {library.github_stars && (
@@ -73,18 +91,24 @@ const tags = library.tags ? library.tags.slice(0, 2).map(t => t.tag_id) : [];
       )}
     </div>
     
-    <p class="mt-2 text-xs text-gray-600 line-clamp-2">
-      {library.description}
-    </p>
-    
-    {tags.length > 0 && (
-      <div class="mt-3 flex flex-wrap gap-1">
-        {tags.map(tag => (
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-            {tag.name}
-          </span>
-        ))}
-      </div>
-    )}
+    <div class="mt-3 flex flex-wrap gap-3">
+      {library.total_components && (
+        <div class="flex items-center text-gray-600 text-xs">
+          <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span>{library.total_components} Components</span>
+        </div>
+      )}
+      
+      {library.npm_downloads && (
+        <div class="flex items-center text-gray-600 text-xs">
+          <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span>{formatNumber(library.npm_downloads)} Downloads</span>
+        </div>
+      )}
+    </div>
   </div>
 </a>

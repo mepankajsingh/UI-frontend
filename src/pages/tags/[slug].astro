@@ -19,21 +19,20 @@ if (!tag) {
   return Astro.redirect('/404');
 }
 
-// Get libraries with this tag
-const { data: libraryTags } = await supabase
+// Get libraries with this tag - fixed query to properly fetch libraries with their frameworks
+const { data: libraries } = await supabase
   .from('library_tags')
   .select(`
-    library_id,
     library:library_id(
       *,
-      framework:framework_id(id, name, slug),
+      frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
       tags:library_tags(tag_id(id, name, slug))
     )
   `)
   .eq('tag_id', tag.id);
 
-// Extract libraries from the join table
-const libraries = libraryTags?.map(lt => lt.library) || [];
+// Extract libraries from the join table results
+const librariesData = libraries?.map(item => item.library).filter(Boolean) || [];
 ---
 
 <Layout title={`${tag.name} UI Libraries - UI Library Directory`}>
@@ -50,9 +49,9 @@ const libraries = libraryTags?.map(lt => lt.library) || [];
       </p>
     </div>
 
-    {libraries && libraries.length > 0 ? (
+    {librariesData && librariesData.length > 0 ? (
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {libraries.map(library => (
+        {librariesData.map(library => (
           <LibraryCard library={library} />
         ))}
       </div>
