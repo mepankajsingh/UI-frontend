@@ -1,7 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
+import DownloadStatsChart from '../../components/DownloadStatsChart.jsx';
 import { supabase } from '../../lib/supabase';
+import { getNpmDownloads, getTotalDownloads, formatDownloads } from '../../lib/npmStats';
 
 export const prerender = false;
 
@@ -31,6 +33,15 @@ if (!framework) {
 }
 
 const imageUrl = framework.icon_url || framework.logo_url || '/favicon.svg';
+
+// Get npm download stats if package name is available
+let downloadsData = null;
+let totalDownloads = 0;
+
+if (framework.npm_package_name) {
+  downloadsData = await getNpmDownloads(framework.npm_package_name);
+  totalDownloads = getTotalDownloads(downloadsData);
+}
 ---
 
 <Layout title={`${framework.name} UI Libraries - UI Library Directory`}>
@@ -91,12 +102,28 @@ const imageUrl = framework.icon_url || framework.logo_url || '/favicon.svg';
               class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
             >
               <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
+                <path d="M0 0v24h24V0H0zm<boltArtifact id="npm-stats-implementation-continued" title="Add NPM Package Stats (Continued)">
+<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
               </svg>
               npm
             </a>
           )}
         </div>
+
+        {/* NPM Download Stats */}
+        {framework.npm_package_name && (
+          <div class="mb-6">
+            <div class="flex items-center mb-2">
+              <h2 class="text-sm font-medium text-gray-900">Download Statistics</h2>
+              {totalDownloads > 0 && (
+                <span class="ml-2 text-xs text-gray-500">
+                  {formatDownloads(totalDownloads)} downloads last month
+                </span>
+              )}
+            </div>
+            <DownloadStatsChart packageName={framework.npm_package_name} client:load />
+          </div>
+        )}
       </div>
     </div>
 
