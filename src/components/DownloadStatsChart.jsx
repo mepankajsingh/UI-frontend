@@ -76,15 +76,15 @@ export default function DownloadStatsChart({ packageName }) {
 
   if (loading) {
     return (
-      <div className="bg-gray-50 rounded-md p-3 h-24 flex items-center justify-center">
-        <div className="animate-pulse text-gray-400 text-sm">Loading stats for {packageName}...</div>
+      <div className="bg-gray-50 rounded-md p-3 h-40 flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Loading stats for {packageName}...</div>
       </div>
     );
   }
 
   if (error || !downloadsData || !downloadsData.downloads || downloadsData.downloads.length === 0) {
     return (
-      <div className="bg-gray-50 rounded-md p-3 h-24 flex items-center justify-center">
+      <div className="bg-gray-50 rounded-md p-3 h-40 flex items-center justify-center">
         <div className="text-gray-400 text-sm">
           {error || `No download data available for ${packageName}`}
         </div>
@@ -145,7 +145,7 @@ export default function DownloadStatsChart({ packageName }) {
           autoSkip: true,
           maxTicksLimit: 7,
           font: {
-            size: 10
+            size: 8
           }
         },
         grid: {
@@ -156,7 +156,7 @@ export default function DownloadStatsChart({ packageName }) {
         display: true,
         ticks: {
           font: {
-            size: 10
+            size: 8
           },
           callback: function(value) {
             if (value >= 1000000) {
@@ -177,8 +177,8 @@ export default function DownloadStatsChart({ packageName }) {
 
   return (
     <div className="bg-white rounded-md p-3">
-      <h3 className="text-base font-medium text-gray-700 mb-2">Downloads (Last 30 Days)</h3>
-      <div className="h-32">
+      <h3 className="text-xs font-medium text-gray-700 mb-2">Downloads (Last 30 Days)</h3>
+      <div className="h-40">
         <Line data={chartData} options={options} />
       </div>
     </div>

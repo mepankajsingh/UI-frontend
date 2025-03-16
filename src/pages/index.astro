@@ -29,24 +29,24 @@ const { data: libraries } = await supabase
   <main>
     <!-- Hero section -->
     <div class="bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="text-center">
-          <h1 class="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl">
+          <h1 class="text-3xl font-bold text-gray-900 sm:text-4xl">
             UI Library Directory
           </h1>
-          <p class="mt-3 max-w-md mx-auto text-base text-gray-600 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+          <p class="mt-3 max-w-md mx-auto text-sm text-gray-600 sm:text-base">
             Find the perfect UI component library for your next JavaScript project
           </p>
-          <div class="mt-8 flex justify-center gap-4">
+          <div class="mt-6 flex justify-center gap-4">
             <a
               href="/libraries"
-              class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+              class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
             >
               Browse Libraries
             </a>
             <a
               href="/search"
-              class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+              class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
             >
               Search
             </a>
@@ -57,10 +57,10 @@ const { data: libraries } = await supabase
 
     <!-- Frameworks section -->
     <div class="bg-gray-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="mb-8 flex justify-between items-center">
-          <h2 class="text-2xl font-bold text-gray-900">Popular Frameworks</h2>
-          <a href="/frameworks" class="text-indigo-600 hover:text-indigo-500 font-medium">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="mb-4 flex justify-between items-center">
+          <h2 class="text-xl font-bold text-gray-900">Popular Frameworks</h2>
+          <a href="/frameworks" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
             View all frameworks →
           </a>
         </div>
@@ -73,7 +73,7 @@ const { data: libraries } = await supabase
           </div>
         ) : (
           <div class="text-center py-8">
-            <p class="text-gray-500">Loading frameworks...</p>
+            <p class="text-sm text-gray-500">Loading frameworks...</p>
           </div>
         )}
       </div>
@@ -81,10 +81,10 @@ const { data: libraries } = await supabase
 
     <!-- Libraries section -->
     <div class="bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div class="mb-8 flex justify-between items-center">
-          <h2 class="text-2xl font-bold text-gray-900">Popular Libraries</h2>
-          <a href="/libraries" class="text-indigo-600 hover:text-indigo-500 font-medium">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="mb-4 flex justify-between items-center">
+          <h2 class="text-xl font-bold text-gray-900">Popular Libraries</h2>
+          <a href="/libraries" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
             View all libraries →
           </a>
         </div>
@@ -97,7 +97,7 @@ const { data: libraries } = await supabase
           </div>
         ) : (
           <div class="text-center py-8">
-            <p class="text-gray-500">Loading libraries...</p>
+            <p class="text-sm text-gray-500">Loading libraries...</p>
           </div>
         )}
       </div>
