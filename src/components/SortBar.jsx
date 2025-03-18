@@ -22,21 +22,42 @@ export default function SortBar({ onSortChange = () => {}, initialSort = { field
     // Always dispatch the event as a backup
     const event = new CustomEvent('sort-change', { 
       detail: newSortConfig,
-      bubbles: true, // Make sure event bubbles up
-      cancelable: true
-    });
-    document.dispatchEvent(event);
-  };
-
-  // Initialize sort on mount
-  useEffect(() => {
-    // Dispatch initial sort when component mounts
-    const event = new CustomEvent('sort-change', { 
-      detail: sortConfig,
       bubbles: true,
       cancelable: true
     });
     document.dispatchEvent(event);
+    
+    // Store in sessionStorage as fallback for ISR
+    try {
+      sessionStorage.setItem('ui-library-sort', JSON.stringify(newSortConfig));
+    } catch (e) {
+      console.error('Failed to store sort config in sessionStorage:', e);
+    }
+  };
+
+  // Initialize sort on mount with a slight delay to ensure DOM is ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Dispatch initial sort when component mounts
+      const event = new CustomEvent('sort-change', { 
+        detail: sortConfig,
+        bubbles: true,
+        cancelable: true
+      });
+      document.dispatchEvent(event);
+      
+      // Store in sessionStorage as fallback for ISR
+      try {
+        sessionStorage.setItem('ui-library-sort', JSON.stringify(sortConfig));
+      } catch (e) {
+        console.error('Failed to store sort config in sessionStorage:', e);
+      }
+      
+      // Signal that the component is mounted and ready
+      document.dispatchEvent(new CustomEvent('sort-component-ready'));
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const getSortIcon = (field) => {

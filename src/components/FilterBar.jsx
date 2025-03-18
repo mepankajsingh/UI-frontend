@@ -25,10 +25,17 @@ export default function FilterBar({ onFilterChange = () => {}, initialFilters = 
     // Always dispatch the event as a backup
     const event = new CustomEvent('filter-change', { 
       detail: newFilters,
-      bubbles: true, // Make sure event bubbles up
+      bubbles: true,
       cancelable: true
     });
     document.dispatchEvent(event);
+    
+    // Store in sessionStorage as fallback for ISR
+    try {
+      sessionStorage.setItem('ui-library-filters', JSON.stringify(newFilters));
+    } catch (e) {
+      console.error('Failed to store filters in sessionStorage:', e);
+    }
   };
 
   const handleTagToggle = (tag) => {
@@ -39,15 +46,29 @@ export default function FilterBar({ onFilterChange = () => {}, initialFilters = 
     handleFilterChange('tags', newTags);
   };
 
-  // Initialize filters on mount
+  // Initialize filters on mount with a slight delay to ensure DOM is ready
   useEffect(() => {
-    // Dispatch initial filters when component mounts
-    const event = new CustomEvent('filter-change', { 
-      detail: filters,
-      bubbles: true,
-      cancelable: true
-    });
-    document.dispatchEvent(event);
+    const timer = setTimeout(() => {
+      // Dispatch initial filters when component mounts
+      const event = new CustomEvent('filter-change', { 
+        detail: filters,
+        bubbles: true,
+        cancelable: true
+      });
+      document.dispatchEvent(event);
+      
+      // Store in sessionStorage as fallback for ISR
+      try {
+        sessionStorage.setItem('ui-library-filters', JSON.stringify(filters));
+      } catch (e) {
+        console.error('Failed to store filters in sessionStorage:', e);
+      }
+      
+      // Signal that the component is mounted and ready
+      document.dispatchEvent(new CustomEvent('filter-component-ready'));
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   return (

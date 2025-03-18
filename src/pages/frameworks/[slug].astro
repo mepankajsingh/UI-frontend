@@ -121,7 +121,7 @@ const librariesData = libraries.map(library => {
             {framework.npm_downloads && (
               <div class="flex items-center text-gray-600 text-sm">
                 <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">4l-4 4m0 0l-4-4m4 4V4"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4l-4 4m0 0l-4-4m4 4V4"></path>
                 </svg>
                 {formatNumber(framework.npm_downloads)}
               </div>
@@ -225,16 +225,36 @@ const librariesData = libraries.map(library => {
     document.addEventListener('DOMContentLoaded', () => {
       const librariesContainer = document.getElementById('libraries-container');
       const libraryCountElement = document.getElementById('library-count');
+      
+      // Initialize with stored values or defaults
       let currentFilters = {
         minComponents: '',
         minDownloads: '',
         lastUpdated: '',
         tags: []
       };
+      
       let currentSort = {
         field: 'popularity',
         direction: 'desc'
       };
+      
+      // Try to load saved filters and sort from sessionStorage
+      try {
+        const savedFilters = sessionStorage.getItem('ui-library-filters');
+        if (savedFilters) {
+          currentFilters = JSON.parse(savedFilters);
+          console.log('Loaded filters from sessionStorage:', currentFilters);
+        }
+        
+        const savedSort = sessionStorage.getItem('ui-library-sort');
+        if (savedSort) {
+          currentSort = JSON.parse(savedSort);
+          console.log('Loaded sort from sessionStorage:', currentSort);
+        }
+      } catch (e) {
+        console.error('Failed to load from sessionStorage:', e);
+      }
 
       // Function to apply filters and sorting
       function applyFiltersAndSort() {
@@ -369,8 +389,56 @@ const librariesData = libraries.map(library => {
         applyFiltersAndSort();
       });
       
-      // Initial application of filters and sorting
+      // Apply initial filters and sorting immediately
       applyFiltersAndSort();
+      
+      // Set up a MutationObserver to detect when the React components are fully rendered
+      const observer = new MutationObserver((mutations) => {
+        // Check if our filter/sort components are in the DOM
+        const filterBarExists = document.querySelector('.filter-bar');
+        const sortBarExists = document.querySelector('.sort-bar');
+        
+        if (filterBarExists || sortBarExists) {
+          // Components are in the DOM, disconnect observer
+          observer.disconnect();
+          
+          // Re-apply filters and sorting to ensure everything is properly rendered
+          setTimeout(() => {
+            applyFiltersAndSort();
+          }, 100);
+        }
+      });
+      
+      // Start observing the document with the configured parameters
+      observer.observe(document.body, { childList: true, subtree: true });
+      
+      // Set up a fallback timer in case the components never fully render
+      setTimeout(() => {
+        applyFiltersAndSort();
+        observer.disconnect();
+      }, 1000);
     });
+  </script>
+  
+  <!-- Hydration fix script - runs before React hydration -->
+  <script>
+    // This script runs before React hydration to ensure we have access to stored filters/sort
+    (function() {
+      // Try to load saved filters and sort from sessionStorage
+      try {
+        const savedFilters = sessionStorage.getItem('ui-library-filters');
+        const savedSort = sessionStorage.getItem('ui-library-sort');
+        
+        // Create a global object to store these values for React components to access
+        window.__UI_LIBRARY_STATE__ = {
+          filters: savedFilters ? JSON.parse(savedFilters) : null,
+          sort: savedSort ? JSON.parse(savedSort) : null
+        };
+        
+        console.log('Pre-hydration state loaded:', window.__UI_LIBRARY_STATE__);
+      } catch (e) {
+        console.error('Failed to load pre-hydration state:', e);
+      }
+    })();
   </script>
 </Layout>
