@@ -1,6 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
+import FilterBar from '../../components/FilterBar.jsx';
+import SortBar from '../../components/SortBar.jsx';
 import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
@@ -57,6 +59,34 @@ function formatNumber(num) {
   }
   return num.toString();
 }
+
+// Initial filter state - pre-select current framework
+const initialFilters = {
+  minComponents: '',
+  minDownloads: '',
+  lastUpdated: '',
+  tags: []
+};
+
+// Initial sort state
+const initialSort = {
+  field: 'popularity',
+  direction: 'desc'
+};
+
+// Prepare libraries data for client-side filtering
+const librariesData = libraries.map(library => {
+  return {
+    id: library.id,
+    name: library.name,
+    slug: library.slug,
+    total_components: library.total_components,
+    npm_downloads: library.npm_downloads,
+    github_stars: library.github_stars,
+    last_update: library.last_update,
+    tags: library.tags ? library.tags.map(t => t.tag_id?.name?.toLowerCase()) : []
+  };
+});
 ---
 
 <Layout title={framework.title || `${framework.name} UI Libraries`}>
@@ -76,7 +106,7 @@ function formatNumber(num) {
           <div>
             <h1 class="text-xl font-bold text-gray-900">{framework.name}</h1>
             <p class="text-sm text-gray-500">
-              {libraries.length} {libraries.length === 1 ? 'library' : 'libraries'} available
+              <span id="library-count">{libraries.length}</span> {libraries.length === 1 ? 'library' : 'libraries'} available
             </p>
           </div>
           <div class="ml-auto flex space-x-4">
@@ -91,7 +121,7 @@ function formatNumber(num) {
             {framework.npm_downloads && (
               <div class="flex items-center text-gray-600 text-sm">
                 <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">4l-4 4m0 0l-4-4m4 4V4"></path>
                 </svg>
                 {formatNumber(framework.npm_downloads)}
               </div>
@@ -163,16 +193,184 @@ function formatNumber(num) {
     
     <h2 class="text-lg font-medium text-gray-900 mb-4">{framework.name} Libraries</h2>
     
-    {libraries.length > 0 ? (
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {libraries.map(library => (
-          <LibraryCard library={library} />
-        ))}
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <!-- Sidebar with filters -->
+      <div class="lg:col-span-1">
+        <FilterBar client:load initialFilters={initialFilters} />
       </div>
-    ) : (
-      <div class="text-center py-12">
-        <p class="text-gray-500">No libraries found for this framework.</p>
+      
+      <!-- Main content area -->
+      <div class="lg:col-span-3">
+        <SortBar client:load initialSort={initialSort} />
+        
+        <div id="libraries-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {libraries.map(library => (
+            <div class="library-card" data-library-id={library.id}>
+              <LibraryCard library={library} />
+            </div>
+          ))}
+        </div>
+        
+        {libraries.length === 0 && (
+          <div class="text-center py-12">
+            <p class="text-gray-500">No libraries found for this framework.</p>
+          </div>
+        )}
       </div>
-    )}
+    </div>
   </main>
+
+  <script define:vars={{ librariesData, slug }}>
+    // Client-side filtering and sorting logic
+    document.addEventListener('DOMContentLoaded', () => {
+      const librariesContainer = document.getElementById('libraries-container');
+      const libraryCountElement = document.getElementById('library-count');
+      let currentFilters = {
+        minComponents: '',
+        minDownloads: '',
+        lastUpdated: '',
+        tags: []
+      };
+      let currentSort = {
+        field: 'popularity',
+        direction: 'desc'
+      };
+
+      // Function to apply filters and sorting
+      function applyFiltersAndSort() {
+        console.log('Applying filters:', currentFilters);
+        console.log('Applying sort:', currentSort);
+        
+        // Get all libraries that match the current filters
+        const filteredLibraries = librariesData.filter(library => {
+          // Apply component count filter
+          if (currentFilters.minComponents && 
+              parseInt(currentFilters.minComponents) > 0 &&
+              (!library.total_components || library.total_components < parseInt(currentFilters.minComponents))) {
+            return false;
+          }
+          
+          // Apply downloads filter
+          if (currentFilters.minDownloads && 
+              parseInt(currentFilters.minDownloads) > 0 &&
+              (!library.npm_downloads || library.npm_downloads < parseInt(currentFilters.minDownloads))) {
+            return false;
+          }
+          
+          // Apply last updated filter
+          if (currentFilters.lastUpdated && parseInt(currentFilters.lastUpdated) > 0) {
+            const daysAgo = parseInt(currentFilters.lastUpdated);
+            if (!library.last_update) return false;
+            
+            const lastUpdated = new Date(library.last_update);
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
+            
+            if (lastUpdated < cutoffDate) {
+              return false;
+            }
+          }
+          
+          // Apply tags filter
+          if (currentFilters.tags && currentFilters.tags.length > 0) {
+            const libraryTags = library.tags || [];
+            if (!currentFilters.tags.some(tag => libraryTags.includes(tag))) {
+              return false;
+            }
+          }
+          
+          return true;
+        });
+        
+        console.log('Filtered libraries:', filteredLibraries);
+        
+        // Sort the filtered libraries
+        filteredLibraries.sort((a, b) => {
+          let valueA, valueB;
+          
+          switch (currentSort.field) {
+            case 'name':
+              valueA = a.name || '';
+              valueB = b.name || '';
+              break;
+            case 'downloads':
+              valueA = a.npm_downloads || 0;
+              valueB = b.npm_downloads || 0;
+              break;
+            case 'components':
+              valueA = a.total_components || 0;
+              valueB = b.total_components || 0;
+              break;
+            case 'updated':
+              valueA = new Date(a.last_update || 0).getTime();
+              valueB = new Date(b.last_update || 0).getTime();
+              break;
+            case 'popularity':
+            default:
+              valueA = a.github_stars || 0;
+              valueB = b.github_stars || 0;
+              break;
+          }
+          
+          const multiplier = currentSort.direction === 'desc' ? -1 : 1;
+          
+          if (typeof valueA === 'string' && typeof valueB === 'string') {
+            return multiplier * valueA.localeCompare(valueB);
+          } else {
+            return multiplier * (valueA - valueB);
+          }
+        });
+        
+        // Update the DOM to reflect filtered and sorted libraries
+        if (librariesContainer) {
+          // Hide all library cards first
+          const allCards = document.querySelectorAll('.library-card');
+          allCards.forEach(card => {
+            card.style.display = 'none';
+          });
+          
+          // Show and reorder the filtered cards
+          filteredLibraries.forEach((library, index) => {
+            const card = document.querySelector(`.library-card[data-library-id="${library.id}"]`);
+            if (card) {
+              card.style.display = 'block';
+              // Move to the correct position
+              librariesContainer.appendChild(card);
+            }
+          });
+          
+          // Update the library count
+          if (libraryCountElement) {
+            libraryCountElement.textContent = filteredLibraries.length;
+          }
+          
+          // Update the plural form of "libraries"
+          const countText = libraryCountElement?.nextSibling;
+          if (countText && countText.nodeType === Node.TEXT_NODE) {
+            const newText = filteredLibraries.length === 1 ? ' library' : ' libraries';
+            if (!countText.textContent.includes(newText)) {
+              countText.textContent = newText + ' available';
+            }
+          }
+        }
+      }
+
+      // Listen for filter changes - use document instead of window
+      document.addEventListener('filter-change', (event) => {
+        console.log('Filter change event received:', event.detail);
+        currentFilters = event.detail;
+        applyFiltersAndSort();
+      });
+      
+      // Listen for sort changes - use document instead of window
+      document.addEventListener('sort-change', (event) => {
+        console.log('Sort change event received:', event.detail);
+        currentSort = event.detail;
+        applyFiltersAndSort();
+      });
+      
+      // Initial application of filters and sorting
+      applyFiltersAndSort();
+    });
+  </script>
 </Layout>
