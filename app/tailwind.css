@@ -2,11 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-  @apply bg-white dark:bg-gray-950;
-
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+@layer base {
+  html {
+    font-size: 16px;
+  }
+  
+  body {
+    @apply text-base;
+  }
+  
+  h1 {
+    @apply text-4xl font-bold;
+  }
+  
+  h2 {
+    @apply text-3xl font-bold;
+  }
+  
+  h3 {
+    @apply text-2xl font-bold;
+  }
+  
+  h4 {
+    @apply text-xl font-bold;
+  }
+  
+  h5 {
+    @apply text-lg font-bold;
+  }
+  
+  h6 {
+    @apply text-base font-bold;
+  }
+  
+  p {
+    @apply text-base;
+  }
+  
+  a {
+    @apply text-base;
   }
 }

@@ -1,26 +1,34 @@
+import typography from '@tailwindcss/typography';
+
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
+  content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
   theme: {
     extend: {
-      colors: {
-        primary: '#6366f1', // Indigo-500
-        'primary-light': '#818cf8', // Indigo-400
-        'primary-dark': '#4f46e5', // Indigo-600
-        'primary-bg': '#f9fafb', // Gray-50
-        'primary-text': '#1f2937', // Gray-800
-        'secondary-text': '#4b5563', // Gray-600
+      fontFamily: {
+        sans: [
+          '"Inter"',
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+          '"Apple Color Emoji"',
+          '"Segoe UI Emoji"',
+          '"Segoe UI Symbol"',
+          '"Noto Color Emoji"',
+        ],
       },
-      animation: {
-        pulse: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      },
-      keyframes: {
-        pulse: {
-          '0%, 100%': { opacity: 0.5 },
-          '50%': { opacity: 0.8 },
-        },
-      },
+      fontSize: {
+        'xs': '0.875rem',     // 14px
+        'sm': '1rem',         // 16px
+        'base': '1.125rem',   // 18px
+        'lg': '1.25rem',      // 20px
+        'xl': '1.5rem',       // 24px
+        '2xl': '1.75rem',     // 28px
+        '3xl': '2rem',        // 32px
+        '4xl': '2.5rem',      // 40px
+        '5xl': '3rem',        // 48px
+      }
     },
   },
-  plugins: [],
-};
+  plugins: [typography()],
+}
