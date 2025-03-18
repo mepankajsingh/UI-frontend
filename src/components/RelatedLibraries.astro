@@ -35,79 +35,14 @@ const libraries = relatedLibraries
       .map(item => item.libraries)
       .filter(library => library !== null)
   : [];
-
-// Format numbers for display
-function formatNumber(num) {
-  if (!num) return '0';
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
-  }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'k';
-  }
-  return num.toString();
-}
 ---
 
 {libraries.length > 0 && (
   <div class="mt-8">
     <h2 class="text-lg font-medium text-gray-900 mb-4">Related Libraries</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {libraries.map(library => (
-        <div class="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-          <div class="p-4">
-            <div class="flex items-center mb-2">
-              <div class="w-8 h-8 flex items-center justify-center mr-3">
-                <img 
-                  src={library.icon_url || library.logo_url || '/favicon.svg'} 
-                  alt={`${library.name} logo`} 
-                  class="max-w-full max-h-full object-contain"
-                  onerror="this.onerror=null; this.src='/favicon.svg';"
-                />
-              </div>
-              <div>
-                <h3 class="text-base font-medium text-gray-900">
-                  <a href={`/libraries/${library.slug}`} class="hover:text-indigo-600">
-                    {library.name}
-                  </a>
-                </h3>
-                
-                {/* Framework name */}
-                {library.frameworks && library.frameworks.length > 0 && (
-                  <div class="text-xs text-gray-500">
-                    {library.frameworks
-                      .filter(fw => fw.framework_id)
-                      .map(fw => fw.framework_id.name)
-                      .join(', ')}
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Stats row */}
-            <div class="flex items-center justify-between text-xs text-gray-500 mt-2">
-              {/* Downloads */}
-              {library.npm_downloads && (
-                <div class="flex items-center">
-                  <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                  </svg>
-                  <span>{formatNumber(library.npm_downloads)}</span>
-                </div>
-              )}
-              
-              {/* Last update */}
-              {library.last_update && (
-                <div class="flex items-center">
-                  <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  <span>{new Date(library.last_update).toLocaleDateString()}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <LibraryCard library={library} />
       ))}
     </div>
   </div>

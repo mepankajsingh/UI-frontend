@@ -29,7 +29,8 @@ export default function DownloadStatsChart({ packageName }) {
   const [downloadsData, setDownloadsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [chartId] = useState(`chart-${Math.random().toString(36).substring(2, 9)}`);
+  const [chartData, setChartData] = useState(null);
+  const [chartOptions, setChartOptions] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,8 +51,92 @@ export default function DownloadStatsChart({ packageName }) {
         const data = await getNpmDownloads(packageName);
         console.log(`Download data received for ${packageName}:`, data);
         
-        if (isMounted && data) {
+        if (isMounted && data && data.downloads && data.downloads.length > 0) {
           setDownloadsData(data);
+          
+          // Prepare data for Chart.js
+          const labels = data.downloads.map(day => {
+            const date = new Date(day.day);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+          });
+
+          const downloads = data.downloads.map(day => day.downloads);
+
+          setChartData({
+            labels,
+            datasets: [
+              {
+                fill: true,
+                label: `Downloads for ${packageName}`,
+                data: downloads,
+                borderColor: 'rgb(75, 85, 99)',
+                backgroundColor: 'rgba(75, 85, 99, 0.1)',
+                tension: 0.3,
+                pointRadius: 2,
+                pointHoverRadius: 5,
+                borderWidth: 2,
+              },
+            ],
+          });
+
+          setChartOptions({
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    const index = tooltipItems[0].dataIndex;
+                    const date = new Date(data.downloads[index].day);
+                    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                  },
+                  label: (context) => {
+                    return `Downloads: ${context.raw.toLocaleString()}`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                display: true,
+                ticks: {
+                  maxRotation: 0,
+                  autoSkip: true,
+                  maxTicksLimit: 7,
+                  font: {
+                    size: 8
+                  }
+                },
+                grid: {
+                  display: false
+                }
+              },
+              y: {
+                display: true,
+                ticks: {
+                  font: {
+                    size: 8
+                  },
+                  callback: function(value) {
+                    if (value >= 1000000) {
+                      return (value / 1000000).toFixed(1) + 'M';
+                    }
+                    if (value >= 1000) {
+                      return (value / 1000).toFixed(0) + 'k';
+                    }
+                    return value;
+                  }
+                },
+                grid: {
+                  color: 'rgba(0, 0, 0, 0.05)'
+                }
+              }
+            },
+          });
+          
           setLoading(false);
           setError(null);
         } else if (isMounted) {
@@ -82,7 +167,7 @@ export default function DownloadStatsChart({ packageName }) {
     );
   }
 
-  if (error || !downloadsData || !downloadsData.downloads || downloadsData.downloads.length === 0) {
+  if (error || !chartData) {
     return (
       <div className="bg-gray-50 rounded-md p-3 h-40 flex items-center justify-center">
         <div className="text-gray-400 text-sm">
@@ -92,94 +177,20 @@ export default function DownloadStatsChart({ packageName }) {
     );
   }
 
-  // Prepare data for Chart.js
-  const labels = downloadsData.downloads.map(day => {
-    const date = new Date(day.day);
-    return `${date.getMonth() + 1}/${date.getDate()}`;
-  });
-
-  const downloads = downloadsData.downloads.map(day => day.downloads);
-
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        fill: true,
-        label: `Downloads for ${packageName}`,
-        data: downloads,
-        borderColor: 'rgb(79, 70, 229)',
-        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-        tension: 0.3,
-        pointRadius: 2,
-        pointHoverRadius: 5,
-        borderWidth: 2,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        callbacks: {
-          title: (tooltipItems) => {
-            const index = tooltipItems[0].dataIndex;
-            const date = new Date(downloadsData.downloads[index].day);
-            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-          },
-          label: (context) => {
-            return `Downloads: ${context.raw.toLocaleString()}`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        display: true,
-        ticks: {
-          maxRotation: 0,
-          autoSkip: true,
-          maxTicksLimit: 7,
-          font: {
-            size: 8
-          }
-        },
-        grid: {
-          display: false
-        }
-      },
-      y: {
-        display: true,
-        ticks: {
-          font: {
-            size: 8
-          },
-          callback: function(value) {
-            if (value >= 1000000) {
-              return (value / 1000000).toFixed(1) + 'M';
-            }
-            if (value >= 1000) {
-              return (value / 1000).toFixed(0) + 'k';
-            }
-            return value;
-          }
-        },
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)'
-        }
-      }
-    },
-  };
+  // Only render the chart when we have both data and options and we're in a browser environment
+  const canRenderChart = typeof window !== 'undefined' && chartData && chartOptions;
 
   return (
     <div className="bg-white rounded-md p-3">
       <h3 className="text-xs font-medium text-gray-700 mb-2">Downloads (Last 30 Days)</h3>
       <div className="h-40">
-        <Line data={chartData} options={options} />
+        {canRenderChart ? (
+          <Line data={chartData} options={chartOptions} />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-gray-400 text-sm">Preparing chart...</div>
+          </div>
+        )}
       </div>
     </div>
   );

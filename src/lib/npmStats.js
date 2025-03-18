@@ -55,3 +55,36 @@ export function formatDownloads(num) {
   }
   return num.toString();
 }
+
+// Function to get npm package details
+export async function getNpmPackageDetails(packageName) {
+  if (!packageName) return null;
+  
+  try {
+    const response = await fetch(`https://registry.npmjs.org/${packageName}`);
+    
+    if (!response.ok) {
+      console.error(`Error fetching package details: ${response.status} ${response.statusText}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    // Extract relevant information
+    const latestVersion = data['dist-tags']?.latest;
+    const versionData = latestVersion ? data.versions[latestVersion] : null;
+    
+    return {
+      name: data.name,
+      version: latestVersion,
+      description: data.description,
+      license: versionData?.license || data.license,
+      lastUpdate: data.time?.modified,
+      homepage: versionData?.homepage || data.homepage,
+      installCommand: `npm install ${data.name}`
+    };
+  } catch (error) {
+    console.error(`Error in getNpmPackageDetails for ${packageName}:`, error);
+    return null;
+  }
+}
