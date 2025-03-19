@@ -1,9 +1,14 @@
 ---
 interface Props {
   library: any;
+  'data-stars'?: number;
+  'data-updated'?: string;
+  'data-components'?: number;
+  'data-downloads'?: number;
+  'data-forks'?: number;
 }
 
-const { library } = Astro.props;
+const { library, ...attributes } = Astro.props;
 
 // Format numbers for display
 function formatNumber(num) {
@@ -17,12 +22,19 @@ function formatNumber(num) {
   return num.toString();
 }
 
-// Get primary framework
+//<boltAction type="file" filePath="src/components/LibraryCard.astro">// Get primary framework
 const primaryFramework = library.frameworks?.find(fw => fw.is_primary)?.framework_id;
 const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
 ---
 
-<div class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200">
+<div 
+  class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200"
+  data-stars={library.github_stars || 0}
+  data-updated={library.last_update || ''}
+  data-components={library.total_components || 0}
+  data-downloads={library.npm_downloads || 0}
+  data-forks={library.github_forks || 0}
+>
   <a href={`/libraries/${library.slug}`} class="block group">
     <div class="p-4 flex flex-col items-center">
       <div class="w-12 h-12 flex items-center justify-center mb-3">

@@ -21,7 +21,7 @@ const { title } = Astro.props;
     <link rel="stylesheet" href="/nprogress.css" />
     <meta name="generator" content={Astro.generator} />
     <title>{title} | UIriver</title>
-    <ViewTransitions />
+    <ViewTransitions fallback="swap" />
   </head>
   <body class="bg-white min-h-screen flex flex-col text-base">
     <LoadingBar client:load />
