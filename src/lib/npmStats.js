@@ -1,12 +1,12 @@
 import { supabase } from './supabase';
 
 // Fetch npm download stats for a package
-export async function getNpmDownloads(packageName, days = 7) {
+export async function getNpmDownloads(packageName) {
   try {
-    // Use a configurable period for download stats (default: 7 days)
+    // Use a 30-day period for download stats
     const end = new Date();
     const start = new Date();
-    start.setDate(start.getDate() - days);
+    start.setDate(start.getDate() - 30);
     
     // Format dates as YYYY-MM-DD
     const startDate = start.toISOString().split('T')[0];
@@ -82,16 +82,14 @@ export async function getNpmPackageDetails(packageName) {
 }
 
 // Cache npm stats in Supabase for better performance
-export async function cacheNpmStats(packageName, stats, days = 7) {
+export async function cacheNpmStats(packageName, stats) {
   try {
     if (!packageName || !stats) return;
-    
-    const cacheKey = `${packageName}_${days}`;
     
     const { error } = await supabase
       .from('npm_stats_cache')
       .upsert({
-        package_name: cacheKey,
+        package_name: packageName,
         stats_data: stats,
         last_updated: new Date().toISOString()
       }, {
@@ -107,38 +105,36 @@ export async function cacheNpmStats(packageName, stats, days = 7) {
 }
 
 // Get cached npm stats if available, otherwise fetch fresh data
-export async function getOptimizedNpmStats(packageName, days = 7) {
+export async function getOptimizedNpmStats(packageName) {
   try {
-    const cacheKey = `${packageName}_${days}`;
-    
     // Try to get from cache first
     const { data: cachedData } = await supabase
       .from('npm_stats_cache')
       .select('stats_data, last_updated')
-      .eq('package_name', cacheKey)
+      .eq('package_name', packageName)
       .single();
     
-    // If we have recent cache (less than 6 hours old), use it
+    // If we have recent cache (less than 24 hours old), use it
     if (cachedData) {
       const lastUpdated = new Date(cachedData.last_updated);
       const now = new Date();
       const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
       
-      if (hoursSinceUpdate < 6) {
+      if (hoursSinceUpdate < 24) {
         return cachedData.stats_data;
       }
     }
     
     // Otherwise fetch fresh data
-    const freshData = await getNpmDownloads(packageName, days);
+    const freshData = await getNpmDownloads(packageName);
     
     // Cache the fresh data for future use
-    await cacheNpmStats(packageName, freshData, days);
+    await cacheNpmStats(packageName, freshData);
     
     return freshData;
   } catch (error) {
     console.error(`Error in getOptimizedNpmStats for ${packageName}:`, error);
     // Fallback to direct fetch if anything goes wrong
-    return await getNpmDownloads(packageName, days);
+    return await getNpmDownloads(packageName);
   }
 }
