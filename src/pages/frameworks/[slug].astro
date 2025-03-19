@@ -181,9 +181,12 @@ function formatNumber(num) {
   </main>
 </Layout>
 
-<script>
-  // Client-side sorting functionality
-  document.addEventListener('DOMContentLoaded', () => {
+<script define:vars={{ libraries }}>
+  // Make library data available to the client-side script
+  window.libraryData = JSON.parse(JSON.stringify(libraries));
+  
+  // Initialize sorting functionality
+  function initSorting() {
     // Get all library cards
     const librariesGrid = document.getElementById('libraries-grid');
     if (!librariesGrid) return;
@@ -240,7 +243,7 @@ function formatNumber(num) {
       sortLibraries(e.detail.sortBy);
     });
     
-    // Add data attributes to library<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">    // Add data attributes to library cards for sorting
+    // Add data attributes to library cards for sorting
     originalLibraries.forEach(lib => {
       const library = lib.querySelector('a').getAttribute('href').split('/').pop();
       const libraryData = window.libraryData?.find(l => l.slug === library);
@@ -253,10 +256,16 @@ function formatNumber(num) {
         lib.dataset.forks = libraryData.github_forks || '0';
       }
     });
-  });
-</script>
+  }
 
-<script define:vars={{ libraries }}>
-  // Make library data available to the client-side script
-  window.libraryData = JSON.parse(JSON.stringify(libraries));
+  // Run initialization on DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', initSorting);
+  
+  // Also run initialization on Astro page transitions
+  document.addEventListener('astro:page-load', initSorting);
+  
+  // Run initialization immediately for direct page loads
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initSorting();
+  }
 </script>

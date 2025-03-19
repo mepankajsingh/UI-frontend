@@ -5,6 +5,13 @@ export default function SortingControl({ onSortChange, initialSort = 'popular' }
   
   const sortOptions = [
     { id: 'popular', label: 'Popular' },
+    { id: 'latest', label:<boltAction type="file" filePath="src/components/SortingControl.jsx">import { useState, useEffect } from 'react';
+
+export default function SortingControl({ onSortChange, initialSort = 'popular' }) {
+  const [activeSort, setActiveSort] = useState(initialSort);
+  
+  const sortOptions = [
+    { id: 'popular', label: 'Popular' },
     { id: 'latest', label: 'Latest' },
     { id: 'components', label: 'Components' },
     { id: 'downloads', label: 'Downloads' },
@@ -20,6 +27,17 @@ export default function SortingControl({ onSortChange, initialSort = 'popular' }
     });
     document.dispatchEvent(event);
   };
+  
+  // Re-initialize component state when navigating between pages
+  useEffect(() => {
+    // This ensures the component state is properly reset when navigating
+    setActiveSort(initialSort);
+    
+    // Clean up event listeners when component unmounts
+    return () => {
+      // Any cleanup if needed
+    };
+  }, [initialSort]);
   
   return (
     <div className="flex items-center space-x-1 mb-4">
