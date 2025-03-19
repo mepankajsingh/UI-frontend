@@ -169,7 +169,7 @@ export default function DownloadStatsChart({ packageName }) {
                           {/* Tooltip */}
                           <div 
                             className="absolute left-1/2 transform -translate-x-1/2 -translate-y-full mt-[-10px] px-3 py-1.5 bg-gray-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none"
-                            style={{ top: y + 20, zIndex: 99999 }}
+                            style={{ top: y - 5, zIndex: 99999 }}
                           >
                             <div className="absolute w-3 h-3 bg-gray-700 transform rotate-45 -bottom-1 left-1/2 -ml-1.5"></div>
                             {day.downloads.toLocaleString()}
