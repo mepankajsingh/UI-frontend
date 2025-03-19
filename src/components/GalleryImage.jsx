@@ -1,10 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ImageModal from './ImageModal';
 
 export default function GalleryImage({ image, index, libraryName }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  
+  // Reset loading state when image prop changes
+  useEffect(() => {
+    setImageLoaded(false);
+    setHasError(false);
+    
+    // Preload the image
+    const img = new Image();
+    img.src = image.url;
+    
+    img.onload = () => {
+      setImageLoaded(true);
+    };
+    
+    img.onerror = () => {
+      setHasError(true);
+    };
+    
+    return () => {
+      // Clean up
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [image.url]);
   
   const alt = image.alt || `${libraryName} screenshot ${index + 1}`;
   
@@ -39,11 +63,6 @@ export default function GalleryImage({ image, index, libraryName }) {
           src={image.url} 
           alt={alt}
           className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-          onLoad={() => setImageLoaded(true)}
-          onError={(e) => {
-            setHasError(true);
-            setImageLoaded(false);
-          }}
         />
       </div>
       
