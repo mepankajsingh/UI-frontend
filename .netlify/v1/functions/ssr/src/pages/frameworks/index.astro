@@ -1,0 +1,42 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import FrameworkCard from '../../components/FrameworkCard.astro';
+import { supabase } from '../../lib/supabase';
+
+export const prerender = false;
+
+// Get all frameworks
+const { data: frameworks } = await supabase
+  .from('frameworks')
+  .select('*')
+  .order('name');
+---
+
+<Layout title="UI Frameworks - UI Library Directory">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">UI Frameworks</h1>
+      <p class="mt-2 text-sm text-gray-600">
+        Browse UI component libraries by framework
+      </p>
+    </div>
+
+    {frameworks && frameworks.length > 0 ? (
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {frameworks.map((framework) => (
+          <FrameworkCard framework={framework} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-8">
+        <p class="text-gray-500">No frameworks found</p>
+        <a 
+          href="/" 
+          class="inline-flex items-center px-3 py-1.5 mt-4 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          Back to home
+        </a>
+      </div>
+    )}
+  </main>
+</Layout>

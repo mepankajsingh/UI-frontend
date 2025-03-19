@@ -1,0 +1,178 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import LibraryCard from '../../components/LibraryCard.astro';
+import { supabase } from '../../lib/supabase';
+
+export const prerender = false;
+
+const { slug } = Astro.params;
+
+// Get framework details
+const { data: framework } = await supabase
+  .from('frameworks')
+  .select(`
+    *,
+    tags:framework_tags(tag_id(id, name, slug))
+  `)
+  .eq('slug', slug)
+  .single();
+
+// If framework not found, return 404
+if (!framework) {
+  return Astro.redirect('/404');
+}
+
+// Get libraries for this framework
+const { data: libraryRelations } = await supabase
+  .from('library_frameworks')
+  .select(`
+    library_id,
+    is_primary,
+    libraries:library_id(
+      *,
+      frameworks:library_frameworks(
+        is_primary,
+        framework_id(id, name, slug)
+      ),
+      tags:library_tags(tag_id(id, name, slug))
+    )
+  `)
+  .eq('framework_id', framework.id);
+
+// Extract the actual library objects and filter out any nulls
+const libraries = libraryRelations
+  ? libraryRelations
+      .map(item => item.libraries)
+      .filter(library => library !== null)
+  : [];
+
+// Format numbers for display
+function formatNumber(num) {
+  if (!num) return '0';
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'k';
+  }
+  return num.toString();
+}
+---
+
+<Layout title={framework.title || `${framework.name} UI Libraries`}>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">
+      <div class="p-6">
+        <div class="flex items-center mb-4">
+          {framework.icon_url && (
+            <div class="w-12 h-12 flex-shrink-0 mr-4">
+              <img 
+                src={framework.icon_url} 
+                alt={`${framework.name} logo`} 
+                class="w-full h-full object-contain"
+              />
+            </div>
+          )}
+          <div>
+            <h1 class="text-xl font-bold text-gray-900">{framework.name}</h1>
+            <p class="text-sm text-gray-500">
+              {libraries.length} {libraries.length === 1 ? 'library' : 'libraries'} available
+            </p>
+          </div>
+          <div class="ml-auto flex space-x-4">
+            {framework.github_stars && (
+              <div class="flex items-center text-gray-600 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z"/>
+                </svg>
+                {formatNumber(framework.github_stars)}
+              </div>
+            )}
+            {framework.npm_downloads && (
+              <div class="flex items-center text-gray-600 text-sm">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                {formatNumber(framework.npm_downloads)}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <p class="text-sm text-gray-600 mb-6">{framework.description}</p>
+        
+        <div class="flex flex-wrap gap-3">
+          {framework.website_url && (
+            <a 
+              href={framework.website_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+              </svg>
+              Website
+            </a>
+          )}
+          
+          {framework.github_url && (
+            <a 
+              href={framework.github_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+              </svg>
+              GitHub
+            </a>
+          )}
+          
+          {framework.npm_url && (
+            <a 
+              href={framework.npm_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
+              </svg>
+              npm
+            </a>
+          )}
+          
+          {framework.docs_url && (
+            <a 
+              href={framework.docs_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v5a2 2 0 0 0 2 2h5v9H6z"/>
+              </svg>
+              Documentation
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+    
+    <h2 class="text-lg font-medium text-gray-900 mb-4">{framework.name} Libraries</h2>
+    
+    {libraries.length > 0 ? (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {libraries.map(library => (
+          <LibraryCard library={library} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-12">
+        <p class="text-gray-500">No libraries found for this framework.</p>
+      </div>
+    )}
+  </main>
+</Layout>

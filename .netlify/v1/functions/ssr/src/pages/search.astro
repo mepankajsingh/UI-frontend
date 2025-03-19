@@ -1,0 +1,95 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LibraryCard from '../components/LibraryCard.astro';
+import SearchBar from '../components/SearchBar.jsx';
+import { supabase } from '../lib/supabase';
+
+export const prerender = false;
+
+// Get search query from URL
+const query = Astro.url.searchParams.get('q') || '';
+
+// Search libraries if query exists
+let libraries = [];
+if (query) {
+  const { data } = await supabase
+    .from('libraries')
+    .select(`
+      *,
+      frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
+      tags:library_tags(tag_id(id, name, slug))
+    `)
+    .or(`name.ilike.%${query}%, description.ilike.%${query}%`)
+    .order('github_stars', { ascending: false });
+  
+  libraries = data || [];
+}
+---
+
+<Layout title={query ? `Search results for "${query}" - UI Library Directory` : 'Search - UI Library Directory'}>
+  <main>
+    <!-- Hero section -->
+    <div class="bg-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 class="text-2xl font-bold text-gray-900 mb-4">Search UI Libraries</h1>
+        <div class="max-w-2xl">
+          <SearchBar initialQuery={query} client:load />
+        </div>
+      </div>
+    </div>
+
+    <!-- Results section -->
+    {query && (
+      <div class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-4">
+            {libraries.length > 0 
+              ? `Found ${libraries.length} ${libraries.length === 1 ? 'result' : 'results'} for "${query}"`
+              : `No results found for "${query}"`}
+          </h2>
+          
+          {libraries.length > 0 ? (
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {libraries.map(library => (
+                <LibraryCard library={library} />
+              ))}
+            </div>
+          ) : (
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+              <p class="text-gray-600 mb-4">
+                We couldn't find any libraries matching your search. Try:
+              </p>
+              <ul class="list-disc pl-5 text-gray-600 space-y-1">
+                <li>Using different keywords</li>
+                <li>Checking for typos</li>
+                <li>Using more general terms</li>
+                <li>Browsing libraries by <a href="/frameworks" class="text-indigo-600 hover:text-indigo-500">framework</a> instead</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+    
+    {!query && (
+      <div class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Search Tips</h3>
+            <ul class="list-disc pl-5 text-gray-600 space-y-1">
+              <li>Search by library name (e.g., "Material UI", "Chakra")</li>
+              <li>Search by feature (e.g., "datepicker", "dropdown")</li>
+              <li>Search by framework (e.g., "React", "Vue")</li>
+              <li>Search by category (e.g., "form", "layout")</li>
+            </ul>
+            <div class="mt-4 pt-4 border-t border-gray-100">
+              <p class="text-gray-600">
+                Not sure what to search for? Browse libraries by <a href="/frameworks" class="text-indigo-600 hover:text-indigo-500">framework</a> or <a href="/tags" class="text-indigo-600 hover:text-indigo-500">tag</a> instead.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </main>
+</Layout>

@@ -1,0 +1,55 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import LibraryCard from '../../components/LibraryCard.astro';
+import { supabase } from '../../lib/supabase';
+
+export const prerender = false;
+
+// Get all libraries with their frameworks
+const { data: libraries } = await supabase
+  .from('libraries')
+  .select(`
+    *,
+    frameworks:library_frameworks(
+      is_primary,
+      framework_id(id, name, slug)
+    ),
+    tags:library_tags(tag_id(id, name, slug))
+  `)
+  .order('name');
+
+// Get all frameworks for the filter
+const { data: frameworks } = await supabase
+  .from('frameworks')
+  .select('id, name, slug')
+  .order('name');
+
+// Get all tags for the filter
+const { data: tags } = await supabase
+  .from('tags')
+  .select('id, name, slug')
+  .order('name');
+---
+
+<Layout title="UI Component Libraries">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900 mb-2">UI Component Libraries</h1>
+      <p class="text-gray-600">
+        Discover the best UI component libraries for your next project.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {libraries && libraries.map(library => (
+        <LibraryCard library={library} />
+      ))}
+    </div>
+
+    {(!libraries || libraries.length === 0) && (
+      <div class="text-center py-12">
+        <p class="text-gray-500">No libraries found.</p>
+      </div>
+    )}
+  </main>
+</Layout>

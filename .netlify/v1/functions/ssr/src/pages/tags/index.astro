@@ -1,0 +1,42 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TagCard from '../../components/TagCard.astro';
+import { supabase } from '../../lib/supabase';
+
+export const prerender = false;
+
+// Get all tags
+const { data: tags } = await supabase
+  .from('tags')
+  .select('*')
+  .order('name');
+---
+
+<Layout title="Tags - UI Library Directory">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Tags</h1>
+      <p class="mt-2 text-sm text-gray-600">
+        Browse UI component libraries by tag
+      </p>
+    </div>
+
+    {tags && tags.length > 0 ? (
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {tags.map((tag) => (
+          <TagCard tag={tag} />
+        ))}
+      </div>
+    ) : (
+      <div class="text-center py-8">
+        <p class="text-gray-500">No tags found</p>
+        <a 
+          href="/" 
+          class="inline-flex items-center px-3 py-1.5 mt-4 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+        >
+          Back to home
+        </a>
+      </div>
+    )}
+  </main>
+</Layout>
