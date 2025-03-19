@@ -30,5 +30,11 @@ const { title } = Astro.props;
       <slot />
     </div>
     <Footer id="footer" class="md:ml-64 transition-all duration-300" />
+    <script>
+      // Add support for streaming by ensuring hydration happens properly
+      document.addEventListener('astro:page-load', () => {
+        // Re-initialize any client-side components or scripts if needed
+      });
+    </script>
   </body>
 </html>

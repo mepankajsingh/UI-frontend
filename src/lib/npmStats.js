@@ -1,50 +1,44 @@
 import { supabase } from './supabase';
 
-// Function to get npm download stats for a package
-export async function getNpmDownloads(packageName) {
-  if (!packageName) return null;
-  
+// Fetch npm download stats for a package
+export async function getNpmDownloads(packageName, days = 7) {
   try {
-    // Calculate date range for last 30 days
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
+    // Use a configurable period for download stats (default: 7 days)
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
     
     // Format dates as YYYY-MM-DD
-    const formattedStartDate = startDate.toISOString().split('T')[0];
-    const formattedEndDate = endDate.toISOString().split('T')[0];
+    const startDate = start.toISOString().split('T')[0];
+    const endDate = end.toISOString().split('T')[0];
     
-    console.log(`Fetching npm stats for ${packageName} from ${formattedStartDate} to ${formattedEndDate}`);
-    
-    // Fetch download data from npm API
+    // Fetch from npm API
     const response = await fetch(
-      `https://api.npmjs.org/downloads/range/${formattedStartDate}:${formattedEndDate}/${packageName}`
+      `https://api.npmjs.org/downloads/range/${startDate}:${endDate}/${packageName}`
     );
     
     if (!response.ok) {
-      console.error(`Error fetching npm stats: ${response.status} ${response.statusText}`);
-      return null;
+      throw new Error(`Failed to fetch npm stats: ${response.statusText}`);
     }
     
     const data = await response.json();
-    console.log(`Received npm stats for ${packageName}:`, data);
-    return data;
+    return data.downloads || [];
   } catch (error) {
-    console.error(`Error in getNpmDownloads for ${packageName}:`, error);
-    return null;
+    console.error(`Error fetching npm downloads for ${packageName}:`, error);
+    return [];
   }
 }
 
-// Function to calculate total downloads from npm data
+// Calculate total downloads from npm data
 export function getTotalDownloads(downloadsData) {
-  if (!downloadsData || !downloadsData.downloads || !Array.isArray(downloadsData.downloads)) {
+  if (!downloadsData || !Array.isArray(downloadsData)) {
     return 0;
   }
   
-  return downloadsData.downloads.reduce((total, day) => total + day.downloads, 0);
+  return downloadsData.reduce((sum, day) => sum + (day.downloads || 0), 0);
 }
 
-// Function to format download numbers
+// Format download numbers for display
 export function formatDownloads(num) {
   if (!num) return '0';
   if (num >= 1000000) {
@@ -56,16 +50,14 @@ export function formatDownloads(num) {
   return num.toString();
 }
 
-// Function to get npm package details
+// Get npm package details
 export async function getNpmPackageDetails(packageName) {
-  if (!packageName) return null;
-  
   try {
+    // Fetch package details from npm registry
     const response = await fetch(`https://registry.npmjs.org/${packageName}`);
     
     if (!response.ok) {
-      console.error(`Error fetching package details: ${response.status} ${response.statusText}`);
-      return null;
+      throw new Error(`Failed to fetch package details: ${response.statusText}`);
     }
     
     const data = await response.json();
@@ -81,10 +73,72 @@ export async function getNpmPackageDetails(packageName) {
       license: versionData?.license || data.license,
       lastUpdate: data.time?.modified,
       homepage: versionData?.homepage || data.homepage,
-      installCommand: `npm install ${data.name}`
+      installCommand: `npm install ${packageName}`
     };
   } catch (error) {
-    console.error(`Error in getNpmPackageDetails for ${packageName}:`, error);
+    console.error(`Error fetching package details for ${packageName}:`, error);
     return null;
+  }
+}
+
+// Cache npm stats in Supabase for better performance
+export async function cacheNpmStats(packageName, stats, days = 7) {
+  try {
+    if (!packageName || !stats) return;
+    
+    const cacheKey = `${packageName}_${days}`;
+    
+    const { error } = await supabase
+      .from('npm_stats_cache')
+      .upsert({
+        package_name: cacheKey,
+        stats_data: stats,
+        last_updated: new Date().toISOString()
+      }, {
+        onConflict: 'package_name'
+      });
+      
+    if (error) {
+      console.error('Error caching npm stats:', error);
+    }
+  } catch (error) {
+    console.error('Error in cacheNpmStats:', error);
+  }
+}
+
+// Get cached npm stats if available, otherwise fetch fresh data
+export async function getOptimizedNpmStats(packageName, days = 7) {
+  try {
+    const cacheKey = `${packageName}_${days}`;
+    
+    // Try to get from cache first
+    const { data: cachedData } = await supabase
+      .from('npm_stats_cache')
+      .select('stats_data, last_updated')
+      .eq('package_name', cacheKey)
+      .single();
+    
+    // If we have recent cache (less than 6 hours old), use it
+    if (cachedData) {
+      const lastUpdated = new Date(cachedData.last_updated);
+      const now = new Date();
+      const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
+      
+      if (hoursSinceUpdate < 6) {
+        return cachedData.stats_data;
+      }
+    }
+    
+    // Otherwise fetch fresh data
+    const freshData = await getNpmDownloads(packageName, days);
+    
+    // Cache the fresh data for future use
+    await cacheNpmStats(packageName, freshData, days);
+    
+    return freshData;
+  } catch (error) {
+    console.error(`Error in getOptimizedNpmStats for ${packageName}:`, error);
+    // Fallback to direct fetch if anything goes wrong
+    return await getNpmDownloads(packageName, days);
   }
 }
