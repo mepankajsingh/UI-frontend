@@ -10,13 +10,34 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
   
   // Reset state when component is mounted to ensure consistent state after navigation
   useEffect(() => {
-    setFilters({
-      framework: '',
-      theme: '',
-      pricing: '',
-      stars: ''
-    });
+    // Try to load saved filters from localStorage
+    try {
+      const savedFilters = localStorage.getItem('libraryFilters');
+      if (savedFilters) {
+        const parsedFilters = JSON.parse(savedFilters);
+        setFilters(parsedFilters);
+        
+        // Also dispatch the event to apply the filters immediately
+        dispatchFilterEvent(parsedFilters);
+      }
+    } catch (error) {
+      console.error('Error loading saved filters:', error);
+      // Reset to default if there's an error
+      setFilters({
+        framework: '',
+        theme: '',
+        pricing: '',
+        stars: ''
+      });
+    }
   }, []);
+  
+  const dispatchFilterEvent = (filterValues) => {
+    const event = new CustomEvent('filterChange', {
+      detail: { filters: filterValues }
+    });
+    document.dispatchEvent(event);
+  };
   
   const handleFilterChange = (filterType, value) => {
     const newFilters = {
@@ -26,11 +47,11 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
     
     setFilters(newFilters);
     
-    // Dispatch a custom event that the vanilla JS can listen for
-    const event = new CustomEvent('filterChange', {
-      detail: { filters: newFilters }
-    });
-    document.dispatchEvent(event);
+    // Save to localStorage for persistence
+    localStorage.setItem('libraryFilters', JSON.stringify(newFilters));
+    
+    // Dispatch the custom event
+    dispatchFilterEvent(newFilters);
   };
   
   const themeOptions = [
@@ -139,25 +160,20 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
       {Object.values(filters).some(value => value !== '') && (
         <button
           onClick={() => {
-            setFilters({
+            const emptyFilters = {
               framework: '',
               theme: '',
               pricing: '',
               stars: ''
-            });
+            };
+            
+            setFilters(emptyFilters);
+            
+            // Clear localStorage
+            localStorage.removeItem('libraryFilters');
             
             // Dispatch event for clearing filters
-            const event = new CustomEvent('filterChange', {
-              detail: { 
-                filters: {
-                  framework: '',
-                  theme: '',
-                  pricing: '',
-                  stars: ''
-                } 
-              }
-            });
-            document.dispatchEvent(event);
+            dispatchFilterEvent(emptyFilters);
           }}
           className="mt-4 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
         >

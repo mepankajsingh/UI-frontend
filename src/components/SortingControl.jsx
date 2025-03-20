@@ -6,6 +6,14 @@ export default function SortingControl({ onSortChange, initialSort = 'popular' }
   // Reset state when component is mounted to ensure consistent state after navigation
   useEffect(() => {
     setActiveSort(initialSort);
+    
+    // If there was a previously selected sort in localStorage, use that
+    const savedSort = localStorage.getItem('librarySort');
+    if (savedSort) {
+      setActiveSort(savedSort);
+      // Also dispatch the event to apply the sort immediately
+      dispatchSortEvent(savedSort);
+    }
   }, [initialSort]);
   
   const sortOptions = [
@@ -16,14 +24,21 @@ export default function SortingControl({ onSortChange, initialSort = 'popular' }
     { id: 'forks', label: 'Forks' }
   ];
   
-  const handleSortChange = (sortId) => {
-    setActiveSort(sortId);
-    
-    // Dispatch a custom event that the vanilla JS can listen for
+  const dispatchSortEvent = (sortId) => {
     const event = new CustomEvent('sortChange', {
       detail: { sortBy: sortId }
     });
     document.dispatchEvent(event);
+  };
+  
+  const handleSortChange = (sortId) => {
+    setActiveSort(sortId);
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('librarySort', sortId);
+    
+    // Dispatch the custom event
+    dispatchSortEvent(sortId);
   };
   
   return (

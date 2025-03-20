@@ -76,8 +76,9 @@ const { data: tags } = await supabase
 </Layout>
 
 <script>
-  // Client-side filtering and sorting logic
-  document.addEventListener('DOMContentLoaded', () => {
+  // Function to initialize filtering and sorting
+  function initializeLibraryFiltering() {
+    console.log("Initializing library filtering and sorting...");
     const libraryGrid = document.querySelector('.library-grid');
     const libraryCards = Array.from(libraryGrid?.children || []);
     
@@ -174,16 +175,35 @@ const { data: tags } = await supabase
       }
     }
     
-    // Listen for filter changes
-    document.addEventListener('filterChange', (event) => {
+    // Remove any existing event listeners to prevent duplicates
+    document.removeEventListener('filterChange', handleFilterChange);
+    document.removeEventListener('sortChange', handleSortChange);
+    
+    // Define event handlers
+    function handleFilterChange(event) {
       currentFilters = event.detail.filters;
       applyFiltersAndSort();
-    });
+    }
     
-    // Listen for sort changes
-    document.addEventListener('sortChange', (event) => {
+    function handleSortChange(event) {
       currentSort = event.detail.sortBy;
       applyFiltersAndSort();
-    });
-  });
+    }
+    
+    // Add event listeners
+    document.addEventListener('filterChange', handleFilterChange);
+    document.addEventListener('sortChange', handleSortChange);
+    
+    console.log("Library filtering and sorting initialized!");
+  }
+  
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', initializeLibraryFiltering);
+  
+  // Re-initialize after Astro page transitions
+  document.addEventListener('astro:page-load', initializeLibraryFiltering);
+  
+  // Also initialize immediately when script runs
+  // This ensures it works both on direct page load and after navigation
+  initializeLibraryFiltering();
 </script>
