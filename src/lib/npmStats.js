@@ -38,41 +38,45 @@ export function getTotalDownloads(downloadsData) {
   return downloadsData.reduce((sum, day) => sum + (day.downloads || 0), 0);
 }
 
-// Check if a package is trending (2% week-over-week growth)
+// Check if a package is trending (5% week-over-week growth)
+// Modified to exclude the most recent TWO days and look at the two weeks before that
 export function isTrendingPackage(downloadsData) {
   // Debug: Log the data we're working with
   console.log("Checking if trending with data:", downloadsData?.length || 0, "days");
   
-  if (!downloadsData || !Array.isArray(downloadsData) || downloadsData.length < 14) {
+  if (!downloadsData || !Array.isArray(downloadsData) || downloadsData.length < 16) {
     console.log("Not enough data to determine trending status");
     return false;
   }
   
-  // Get the last 14 days of data
-  const last14Days = downloadsData.slice(-14);
+  // Exclude the most recent TWO days
+  const dataExcludingRecentDays = downloadsData.slice(0, -2);
   
-  // Calculate downloads for current week (last 7 days)
-  const currentWeek = last14Days.slice(-7);
-  const currentWeekDownloads = currentWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
+  // Get the last 14 days of data (excluding the most recent two days)
+  const last14Days = dataExcludingRecentDays.slice(-14);
   
-  // Calculate downloads for previous week (7 days before current week)
-  const previousWeek = last14Days.slice(0, 7);
-  const previousWeekDownloads = previousWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
+  // Calculate downloads for the more recent week (last 7 days excluding most recent two days)
+  const recentWeek = last14Days.slice(-7);
+  const recentWeekDownloads = recentWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
+  
+  // Calculate downloads for the previous week (7 days before the recent week)
+  const olderWeek = last14Days.slice(0, 7);
+  const olderWeekDownloads = olderWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
   
   // Debug: Log the calculations
-  console.log(`Current week: ${currentWeekDownloads}, Previous week: ${previousWeekDownloads}`);
+  console.log(`Recent week (excluding last 2 days): ${recentWeekDownloads}, Older week: ${olderWeekDownloads}`);
   
   // Prevent division by zero
-  if (previousWeekDownloads === 0) {
+  if (olderWeekDownloads === 0) {
     return false;
   }
   
   // Calculate percentage increase
-  const percentageIncrease = ((currentWeekDownloads - previousWeekDownloads) / previousWeekDownloads) * 100;
+  const percentageIncrease = ((recentWeekDownloads - olderWeekDownloads) / olderWeekDownloads) * 100;
   console.log(`Percentage increase: ${percentageIncrease.toFixed(2)}%`);
   
-  // Return true if increase is at least 2%
-  return percentageIncrease >= 2;
+  // Return true if increase is at least 5% (changed from 2%)
+  return percentageIncrease >= 5;
 }
 
 // Format download numbers for display
@@ -121,7 +125,6 @@ export async function getNpmPackageDetails(packageName) {
 // Cache npm stats in Supabase for better performance
 export async function cacheNpmStats(packageName, stats) {
   try {
-    if (!packageName || !stats) return
     if (!packageName || !stats) return;
     
     const { error } = await supabase
