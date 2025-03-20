@@ -66,6 +66,9 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
       detail: { filters: newFilters }
     });
     document.dispatchEvent(event);
+    
+    console.log('Filter changed:', filterType, 'to', value);
+    console.log('New filters state:', newFilters);
   };
   
   const themeOptions = [
@@ -271,6 +274,7 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
               }
             });
             document.dispatchEvent(event);
+            console.log('All filters cleared');
           }}
           className="mt-4 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
         >

@@ -41,7 +41,8 @@ const { data: tags } = await supabase
     <div class="mb-8">
       <h1 class="text-2xl font-bold text-gray-900 mb-2">UI Libraries</h1>
       <p class="text-gray-600">
-        Discover the best UI libraries for your next project.<boltAction type="file" filePath="src/pages/libraries/index.astro">      </p>
+        Discover the best UI libraries for your next project.
+      </p>
     </div>
 
     <div class="lg:flex gap-6">
@@ -87,8 +88,12 @@ const { data: tags } = await supabase
 <script>
   // Client-side filtering and sorting logic
   document.addEventListener('DOMContentLoaded', () => {
+    // Store original cards for reset purposes
     const libraryGrid = document.querySelector('.library-grid');
-    const libraryCards = Array.from(libraryGrid?.children || []);
+    if (!libraryGrid) return;
+    
+    const originalCards = Array.from(libraryGrid.children);
+    let libraryCards = [...originalCards];
     
     // Current state
     let currentFilters = {
@@ -101,71 +106,80 @@ const { data: tags } = await supabase
     
     // Apply filters and sorting
     function applyFiltersAndSort() {
-      if (!libraryGrid || !libraryCards.length) return;
+      console.log('Applying filters:', currentFilters);
+      console.log('Current sort:', currentSort);
       
-      // Clone the original array to avoid modifying it
-      let filteredCards = [...libraryCards];
+      // Always start with original cards
+      libraryCards = [...originalCards];
       
       // Apply framework filter
       if (currentFilters.framework) {
-        filteredCards = filteredCards.filter(card => {
-          const cardFramework = card.dataset.framework;
+        libraryCards = libraryCards.filter(card => {
+          const cardFramework = card.getAttribute('data-framework');
+          console.log('Card framework:', cardFramework, 'Filter:', currentFilters.framework);
           return cardFramework === currentFilters.framework;
         });
       }
       
       // Apply theme filter
       if (currentFilters.theme) {
-        filteredCards = filteredCards.filter(card => {
-          const cardTheme = card.dataset.theme;
+        libraryCards = libraryCards.filter(card => {
+          const cardTheme = card.getAttribute('data-theme');
+          console.log('Card theme:', cardTheme, 'Filter:', currentFilters.theme);
           return cardTheme === currentFilters.theme;
         });
       }
       
       // Apply pricing filter
       if (currentFilters.pricing) {
-        filteredCards = filteredCards.filter(card => {
-          const cardPricing = card.dataset.pricing;
+        libraryCards = libraryCards.filter(card => {
+          const cardPricing = card.getAttribute('data-pricing');
+          console.log('Card pricing:', cardPricing, 'Filter:', currentFilters.pricing);
           return cardPricing === currentFilters.pricing;
         });
       }
       
       // Apply stars filter
       if (currentFilters.stars) {
-        filteredCards = filteredCards.filter(card => {
-          const stars = parseInt(card.dataset.stars || '0', 10);
+        libraryCards = libraryCards.filter(card => {
+          const stars = parseInt(card.getAttribute('data-stars') || '0', 10);
           const minStars = parseInt(currentFilters.stars, 10);
+          console.log('Card stars:', stars, 'Min stars:', minStars);
           return stars >= minStars;
         });
       }
       
       // Apply sorting
-      filteredCards.sort((a, b) => {
+      libraryCards.sort((a, b) => {
         switch (currentSort) {
           case 'latest':
-            return new Date(b.dataset.updated || 0) - new Date(a.dataset.updated || 0);
+            return new Date(b.getAttribute('data-updated') || 0) - new Date(a.getAttribute('data-updated') || 0);
           case 'components':
-            return (parseInt(b.dataset.components || '0', 10) - parseInt(a.dataset.components || '0', 10));
+            return (parseInt(b.getAttribute('data-components') || '0', 10) - parseInt(a.getAttribute('data-components') || '0', 10));
           case 'downloads':
-            return (parseInt(b.dataset.downloads || '0', 10) - parseInt(a.dataset.downloads || '0', 10));
+            return (parseInt(b.getAttribute('data-downloads') || '0', 10) - parseInt(a.getAttribute('data-downloads') || '0', 10));
           case 'forks':
-            return (parseInt(b.dataset.forks || '0', 10) - parseInt(a.dataset.forks || '0', 10));
+            return (parseInt(b.getAttribute('data-forks') || '0', 10) - parseInt(a.getAttribute('data-forks') || '0', 10));
           case 'popular':
           default:
-            return (parseInt(b.dataset.stars || '0', 10) - parseInt(a.dataset.stars || '0', 10));
+            return (parseInt(b.getAttribute('data-stars') || '0', 10) - parseInt(a.getAttribute('data-stars') || '0', 10));
         }
       });
       
+      console.log('Filtered cards count:', libraryCards.length);
+      
       // Clear the grid
-      libraryGrid.innerHTML = '';
+      while (libraryGrid.firstChild) {
+        libraryGrid.removeChild(libraryGrid.firstChild);
+      }
       
       // Add filtered and sorted cards back to the grid
-      filteredCards.forEach(card => {
-        libraryGrid.appendChild(card);
-      });
-      
-      // Show "no results" message if needed
-      if (filteredCards.length === 0) {
+      if (libraryCards.length > 0) {
+        libraryCards.forEach(card => {
+          libraryGrid.appendChild(card.cloneNode(true));
+        });
+      } else {
+        // Show "no results" message if needed
         const noResults = document.createElement('div');
         noResults.className = 'text-center py-12 col-span-full';
         noResults.innerHTML = '<p class="text-gray-500">No libraries match your filters.</p>';
@@ -175,12 +189,14 @@ const { data: tags } = await supabase
     
     // Listen for filter changes
     document.addEventListener('filterChange', (event) => {
+      console.log('Filter change event received:', event.detail);
       currentFilters = event.detail.filters;
       applyFiltersAndSort();
     });
     
     // Listen for sort changes
     document.addEventListener('sortChange', (event) => {
+      console.log('Sort change event received:', event.detail);
       currentSort = event.detail.sortBy;
       applyFiltersAndSort();
     });

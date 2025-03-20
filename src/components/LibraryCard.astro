@@ -6,6 +6,9 @@ interface Props {
   'data-components'?: number;
   'data-downloads'?: number;
   'data-forks'?: number;
+  'data-framework'?: string;
+  'data-theme'?: string;
+  'data-pricing'?: string;
 }
 
 import { isTrendingPackage, getOptimizedNpmStats } from '../lib/npmStats';
@@ -47,15 +50,23 @@ if (library.npm_package_name) {
 
 // Debug: Log values to help diagnose issues
 console.log(`Library: ${library.name}, npm_package_name: ${library.npm_package_name}, isTrending: ${isTrending}`);
+
+// Extract data attributes for filtering
+const dataAttributes = {
+  'data-stars': library.github_stars || 0,
+  'data-updated': library.last_update || '',
+  'data-components': library.total_components || 0,
+  'data-downloads': library.npm_downloads || 0,
+  'data-forks': library.github_forks || 0,
+  'data-framework': primaryFramework?.slug || '',
+  'data-theme': library.styling || '',
+  'data-pricing': library.pricing || ''
+};
 ---
 
 <div 
   class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 relative"
-  data-stars={library.github_stars || 0}
-  data-updated={library.last_update || ''}
-  data-components={library.total_components || 0}
-  data-downloads={library.npm_downloads || 0}
-  data-forks={library.github_forks || 0}
+  {...dataAttributes}
 >
   <!-- Trending Label (automatic) - Show only if trending and no manual labels -->
   {isTrending && !hasManualLabels && (
@@ -121,7 +132,7 @@ console.log(`Library: ${library.name}, npm_package_name: ${library.npm_package_n
     {library.npm_downloads && (
       <div class="flex items-center group relative">
         <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4<boltAction type="file" filePath="src/components/LibraryCard.astro">          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
         </svg>
         <span>{formatNumber(library.npm_downloads)}</span>
         <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-indigo-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium">
