@@ -127,12 +127,16 @@ export async function cacheNpmStats(packageName, stats) {
   try {
     if (!packageName || !stats) return;
     
+    // Add cache-busting timestamp to ensure the update is recognized
+    const timestamp = new Date().toISOString();
+    
     const { error } = await supabase
       .from('npm_stats_cache')
       .upsert({
         package_name: packageName,
         stats_data: stats,
-        last_updated: new Date().toISOString()
+        last_updated: timestamp,
+        update_timestamp: timestamp // Additional field to force update
       }, {
         onConflict: 'package_name'
       });
@@ -151,12 +155,21 @@ export async function getOptimizedNpmStats(packageName) {
     // Debug: Log the package name we're fetching
     console.log(`Fetching stats for package: ${packageName}`);
     
-    // Try to get from cache first
-    const { data: cachedData } = await supabase
+    // Add cache-busting query parameter
+    const cacheBuster = new Date().getTime();
+    
+    // Try to get from cache first with cache-control headers
+    const { data: cachedData, error } = await supabase
       .from('npm_stats_cache')
       .select('stats_data, last_updated')
       .eq('package_name', packageName)
+      .order('last_updated', { ascending: false })
+      .limit(1)
       .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" which is fine
+      console.error(`Cache fetch error for ${packageName}:`, error);
+    }
     
     // If we have recent cache (less than 24 hours old), use it
     if (cachedData) {
