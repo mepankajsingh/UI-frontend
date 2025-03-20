@@ -61,17 +61,7 @@ const { data: tags } = await supabase
         <!-- Library grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 library-grid">
           {libraries && libraries.map(library => (
-            <LibraryCard 
-              library={library} 
-              data-stars={library.github_stars || 0}
-              data-updated={library.last_update || ''}
-              data-components={library.total_components || 0}
-              data-downloads={library.npm_downloads || 0}
-              data-forks={library.github_forks || 0}
-              data-framework={library.frameworks?.find(fw => fw.is_primary)?.framework_id?.slug || ''}
-              data-theme={library.styling || ''}
-              data-pricing={library.pricing || ''}
-            />
+            <LibraryCard library={library} />
           ))}
         </div>
 
@@ -88,12 +78,8 @@ const { data: tags } = await supabase
 <script>
   // Client-side filtering and sorting logic
   document.addEventListener('DOMContentLoaded', () => {
-    // Store original cards for reset purposes
     const libraryGrid = document.querySelector('.library-grid');
-    if (!libraryGrid) return;
-    
-    const originalCards = Array.from(libraryGrid.children);
-    let libraryCards = [...originalCards];
+    const libraryCards = Array.from(libraryGrid?.children || []);
     
     // Current state
     let currentFilters = {
@@ -106,80 +92,81 @@ const { data: tags } = await supabase
     
     // Apply filters and sorting
     function applyFiltersAndSort() {
-      console.log('Applying filters:', currentFilters);
-      console.log('Current sort:', currentSort);
+      if (!libraryGrid || !libraryCards.length) return;
       
-      // Always start with original cards
-      libraryCards = [...originalCards];
+      // Clone the original array to avoid modifying it
+      let filteredCards = [...libraryCards];
       
       // Apply framework filter
       if (currentFilters.framework) {
-        libraryCards = libraryCards.filter(card => {
-          const cardFramework = card.getAttribute('data-framework');
-          console.log('Card framework:', cardFramework, 'Filter:', currentFilters.framework);
-          return cardFramework === currentFilters.framework;
+        filteredCards = filteredCards.filter(card => {
+          // Check if the card has the selected framework
+          const frameworkSlugs = card.dataset.frameworkSlugs || '';
+          return frameworkSlugs.includes(currentFilters.framework);
         });
       }
       
       // Apply theme filter
       if (currentFilters.theme) {
-        libraryCards = libraryCards.filter(card => {
-          const cardTheme = card.getAttribute('data-theme');
-          console.log('Card theme:', cardTheme, 'Filter:', currentFilters.theme);
-          return cardTheme === currentFilters.theme;
+        filteredCards = filteredCards.filter(card => {
+          // Check if the card has the selected theme style
+          return card.dataset.styling === currentFilters.theme;
         });
       }
       
       // Apply pricing filter
       if (currentFilters.pricing) {
-        libraryCards = libraryCards.filter(card => {
-          const cardPricing = card.getAttribute('data-pricing');
-          console.log('Card pricing:', cardPricing, 'Filter:', currentFilters.pricing);
-          return cardPricing === currentFilters.pricing;
+        filteredCards = filteredCards.filter(card => {
+          // Check if the card matches the pricing model
+          return card.dataset.pricing === currentFilters.pricing;
         });
       }
       
       // Apply stars filter
       if (currentFilters.stars) {
-        libraryCards = libraryCards.filter(card => {
-          const stars = parseInt(card.getAttribute('data-stars') || '0', 10);
-          const minStars = parseInt(currentFilters.stars, 10);
-          console.log('Card stars:', stars, 'Min stars:', minStars);
-          return stars >= minStars;
+        filteredCards = filteredCards.filter(card => {
+          const stars = parseInt(card.dataset.stars || '0', 10);
+          
+          switch (currentFilters.stars) {
+            case '1000+':
+              return stars >= 1000;
+            case '5000+':
+              return stars >= 5000;
+            case '10000+':
+              return stars >= 10000;
+            default:
+              return true;
+          }
         });
       }
       
       // Apply sorting
-      libraryCards.sort((a, b) => {
+      filteredCards.sort((a, b) => {
         switch (currentSort) {
           case 'latest':
-            return new Date(b.getAttribute('data-updated') || 0) - new Date(a.getAttribute('data-updated') || 0);
+            return new Date(b.dataset.updated || 0) - new Date(a.dataset.updated || 0);
           case 'components':
-            return (parseInt(b.getAttribute('data-components') || '0', 10) - parseInt(a.getAttribute('data-components') || '0', 10));
+            return (parseInt(b.dataset.components || '0', 10) - parseInt(a.dataset.components || '0', 10));
           case 'downloads':
-            return (parseInt(b.getAttribute('data-downloads') || '0', 10) - parseInt(a.getAttribute('data-downloads') || '0', 10));
+            return (parseInt(b.dataset.downloads || '0', 10) - parseInt(a.dataset.downloads || '0', 10));
           case 'forks':
-            return (parseInt(b.getAttribute('data-forks') || '0', 10) - parseInt(a.getAttribute('data-forks') || '0', 10));
+            return (parseInt(b.dataset.forks || '0', 10) - parseInt(a.dataset.forks || '0', 10));
           case 'popular':
           default:
-            return (parseInt(b.getAttribute('data-stars') || '0', 10) - parseInt(a.getAttribute('data-stars') || '0', 10));
+            return (parseInt(b.dataset.stars || '0', 10) - parseInt(a.dataset.stars || '0', 10));
         }
       });
       
-      console.log('Filtered cards count:', libraryCards.length);
-      
       // Clear the grid
-      while (libraryGrid.firstChild) {
-        libraryGrid.removeChild(libraryGrid.firstChild);
-      }
+      libraryGrid.innerHTML = '';
       
       // Add filtered and sorted cards back to the grid
-      if (libraryCards.length > 0) {
-        libraryCards.forEach(card => {
-          libraryGrid.appendChild(card.cloneNode(true));
-        });
-      } else {
-        // Show "no results" message if needed
+      filteredCards.forEach(card => {
+        libraryGrid.appendChild(card);
+      });
+      
+      // Show "no results" message if needed
+      if (filteredCards.length === 0) {
         const noResults = document.createElement('div');
         noResults.className = 'text-center py-12 col-span-full';
         noResults.innerHTML = '<p class="text-gray-500">No libraries match your filters.</p>';
@@ -189,14 +176,12 @@ const { data: tags } = await supabase
     
     // Listen for filter changes
     document.addEventListener('filterChange', (event) => {
-      console.log('Filter change event received:', event.detail);
       currentFilters = event.detail.filters;
       applyFiltersAndSort();
     });
     
     // Listen for sort changes
     document.addEventListener('sortChange', (event) => {
-      console.log('Sort change event received:', event.detail);
       currentSort = event.detail.sortBy;
       applyFiltersAndSort();
     });

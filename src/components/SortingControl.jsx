@@ -24,8 +24,6 @@ export default function SortingControl({ onSortChange, initialSort = 'popular' }
       detail: { sortBy: sortId }
     });
     document.dispatchEvent(event);
-    
-    console.log('Sort changed to:', sortId);
   };
   
   return (
