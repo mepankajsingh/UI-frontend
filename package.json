@@ -15,10 +15,10 @@
     "@astrojs/tailwind": "^5.1.0",
     "@supabase/supabase-js": "^2.39.7",
     "astro": "^5.5.2",
-    "chart.js": "^4.4.1",
+    "chart.js": "^4.4.8",
     "nprogress": "^0.2.0",
     "react": "^18.2.0",
-    "react-chartjs-2": "^5.2.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.2.0",
     "tailwindcss": "^3.4.1"
   },
