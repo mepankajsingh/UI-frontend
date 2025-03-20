@@ -38,6 +38,43 @@ export function getTotalDownloads(downloadsData) {
   return downloadsData.reduce((sum, day) => sum + (day.downloads || 0), 0);
 }
 
+// Check if a package is trending (2% week-over-week growth)
+export function isTrendingPackage(downloadsData) {
+  // Debug: Log the data we're working with
+  console.log("Checking if trending with data:", downloadsData?.length || 0, "days");
+  
+  if (!downloadsData || !Array.isArray(downloadsData) || downloadsData.length < 14) {
+    console.log("Not enough data to determine trending status");
+    return false;
+  }
+  
+  // Get the last 14 days of data
+  const last14Days = downloadsData.slice(-14);
+  
+  // Calculate downloads for current week (last 7 days)
+  const currentWeek = last14Days.slice(-7);
+  const currentWeekDownloads = currentWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
+  
+  // Calculate downloads for previous week (7 days before current week)
+  const previousWeek = last14Days.slice(0, 7);
+  const previousWeekDownloads = previousWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
+  
+  // Debug: Log the calculations
+  console.log(`Current week: ${currentWeekDownloads}, Previous week: ${previousWeekDownloads}`);
+  
+  // Prevent division by zero
+  if (previousWeekDownloads === 0) {
+    return false;
+  }
+  
+  // Calculate percentage increase
+  const percentageIncrease = ((currentWeekDownloads - previousWeekDownloads) / previousWeekDownloads) * 100;
+  console.log(`Percentage increase: ${percentageIncrease.toFixed(2)}%`);
+  
+  // Return true if increase is at least 2%
+  return percentageIncrease >= 2;
+}
+
 // Format download numbers for display
 export function formatDownloads(num) {
   if (!num) return '0';
@@ -84,6 +121,7 @@ export async function getNpmPackageDetails(packageName) {
 // Cache npm stats in Supabase for better performance
 export async function cacheNpmStats(packageName, stats) {
   try {
+    if (!packageName || !stats) return
     if (!packageName || !stats) return;
     
     const { error } = await supabase
@@ -107,6 +145,9 @@ export async function cacheNpmStats(packageName, stats) {
 // Get cached npm stats if available, otherwise fetch fresh data
 export async function getOptimizedNpmStats(packageName) {
   try {
+    // Debug: Log the package name we're fetching
+    console.log(`Fetching stats for package: ${packageName}`);
+    
     // Try to get from cache first
     const { data: cachedData } = await supabase
       .from('npm_stats_cache')
@@ -121,11 +162,13 @@ export async function getOptimizedNpmStats(packageName) {
       const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
       
       if (hoursSinceUpdate < 24) {
+        console.log(`Using cached data for ${packageName}, ${hoursSinceUpdate.toFixed(1)} hours old`);
         return cachedData.stats_data;
       }
     }
     
     // Otherwise fetch fresh data
+    console.log(`Fetching fresh data for ${packageName}`);
     const freshData = await getNpmDownloads(packageName);
     
     // Cache the fresh data for future use

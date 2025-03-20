@@ -23,7 +23,7 @@ if (!framework) {
   return Astro.redirect('/404');
 }
 
-// Get libraries for this framework
+// Get libraries for this framework with labels
 const { data: libraryRelations } = await supabase
   .from('library_frameworks')
   .select(`
@@ -35,7 +35,10 @@ const { data: libraryRelations } = await supabase
         is_primary,
         framework_id(id, name, slug)
       ),
-      tags:library_tags(tag_id(id, name, slug))
+      tags:library_tags(tag_id(id, name, slug)),
+      labels:library_labels(
+        label_id(id, name, color, text_color)
+      )
     )
   `)
   .eq('framework_id', framework.id);
@@ -91,6 +94,7 @@ function formatNumber(num) {
             )}
             {framework.npm_downloads && (
               <div class="flex items-center text-gray-600 text-sm">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">
                 <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                 </svg>

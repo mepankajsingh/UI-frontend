@@ -8,6 +8,8 @@ interface Props {
   'data-forks'?: number;
 }
 
+import { isTrendingPackage, getOptimizedNpmStats } from '../lib/npmStats';
+
 const { library, ...attributes } = Astro.props;
 
 // Format numbers for display
@@ -22,19 +24,60 @@ function formatNumber(num) {
   return num.toString();
 }
 
-//<boltAction type="file" filePath="src/components/LibraryCard.astro">// Get primary framework
+// Get primary framework
 const primaryFramework = library.frameworks?.find(fw => fw.is_primary)?.framework_id;
 const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
+
+// Check for manual labels
+const hasManualLabels = library.labels && library.labels.length > 0;
+
+// Get the first manual label (if any)
+const firstLabel = hasManualLabels ? library.labels[0].label_id : null;
+
+// Check if library is trending based on npm download growth
+let isTrending = false;
+let npmStats = [];
+
+// Fix: Use npm_package_name instead of npm_package
+if (library.npm_package_name) {
+  // Get npm stats regardless of manual labels
+  npmStats = await getOptimizedNpmStats(library.npm_package_name);
+  isTrending = isTrendingPackage(npmStats);
+}
+
+// Debug: Log values to help diagnose issues
+console.log(`Library: ${library.name}, npm_package_name: ${library.npm_package_name}, isTrending: ${isTrending}`);
 ---
 
 <div 
-  class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200"
+  class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 relative"
   data-stars={library.github_stars || 0}
   data-updated={library.last_update || ''}
   data-components={library.total_components || 0}
   data-downloads={library.npm_downloads || 0}
   data-forks={library.github_forks || 0}
 >
+  <!-- Trending Label (automatic) - Show only if trending and no manual labels -->
+  {isTrending && !hasManualLabels && (
+    <div class="absolute top-0 right-0 mt-1 mr-1">
+      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium bg-rose-500 text-white">
+        Trending
+      </span>
+    </div>
+  )}
+
+  <!-- Manual Label (if available) -->
+  {hasManualLabels && firstLabel && (
+    <div class="absolute top-0 right-0 mt-1 mr-1">
+      <span 
+        class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium"
+        style={`background-color: ${firstLabel.color}; color: ${firstLabel.text_color || 'white'};`}
+      >
+        {firstLabel.name}
+      </span>
+    </div>
+  )}
+
   <a href={`/libraries/${library.slug}`} class="block group">
     <div class="p-4 flex flex-col items-center">
       <div class="w-12 h-12 flex items-center justify-center mb-3">
@@ -49,7 +92,7 @@ const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
         {library.name}
       </h3>
       
-      {/* Framework name if available */}
+      <!-- Framework name if available -->
       {primaryFramework && (
         <div class="text-xs text-gray-500 text-center">
           {primaryFramework.name}
@@ -58,9 +101,9 @@ const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
     </div>
   </a>
   
-  {/* Stats row */}
+  <!-- Stats row -->
   <div class="px-4 pb-4 flex items-center justify-center space-x-4 text-xs text-gray-500">
-    {/* Components */}
+    <!-- Components -->
     {library.total_components && (
       <div class="flex items-center group relative">
         <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -74,7 +117,7 @@ const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
       </div>
     )}
     
-    {/* Downloads */}
+    <!-- Downloads -->
     {library.npm_downloads && (
       <div class="flex items-center group relative">
         <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -88,7 +131,7 @@ const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
       </div>
     )}
     
-    {/* Forks */}
+    <!-- Forks -->
     {library.github_forks && (
       <div class="flex items-center group relative">
         <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -103,3 +146,11 @@ const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
     )}
   </div>
 </div>
+
+<style>
+  /* Add text-2xs class for smaller text */
+  .text-2xs {
+    font-size: 0.65rem;
+    line-height: 0.85rem;
+  }
+</style>
