@@ -99,7 +99,7 @@ const { data: tags } = await supabase
       let filteredCards = [...libraryCards];
       
       // Apply framework filter
-      if (currentFilters.framework) {
+      if (currentFilters.framework && currentFilters.framework !== 'all') {
         filteredCards = filteredCards.filter(card => {
           // Check if the card has the selected framework
           const frameworkSlugs = card.dataset.frameworkSlugs || '';
@@ -108,7 +108,7 @@ const { data: tags } = await supabase
       }
       
       // Apply theme filter
-      if (currentFilters.theme) {
+      if (currentFilters.theme && currentFilters.theme !== 'all') {
         filteredCards = filteredCards.filter(card => {
           // Check if the card has the selected theme style
           return card.dataset.styling === currentFilters.theme;
@@ -116,7 +116,7 @@ const { data: tags } = await supabase
       }
       
       // Apply pricing filter
-      if (currentFilters.pricing) {
+      if (currentFilters.pricing && currentFilters.pricing !== 'all') {
         filteredCards = filteredCards.filter(card => {
           // Check if the card matches the pricing model
           return card.dataset.pricing === currentFilters.pricing;
@@ -124,7 +124,7 @@ const { data: tags } = await supabase
       }
       
       // Apply stars filter
-      if (currentFilters.stars) {
+      if (currentFilters.stars && currentFilters.stars !== 'all') {
         filteredCards = filteredCards.filter(card => {
           const stars = parseInt(card.dataset.stars || '0', 10);
           

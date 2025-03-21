@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import * as Select from '@radix-ui/react-select';
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 
 export default function FilterComponent({ frameworks = [], onFilterChange }) {
   const [filters, setFilters] = useState({
@@ -55,19 +57,19 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
   };
   
   const themeOptions = [
-    { id: '', label: 'All Themes' },
+    { id: 'all', label: 'All Themes' },
     { id: 'styled', label: 'Styled' },
     { id: 'unstyled', label: 'Unstyled' }
   ];
   
   const pricingOptions = [
-    { id: '', label: 'All Pricing' },
+    { id: 'all', label: 'All Pricing' },
     { id: 'free', label: 'Free' },
     { id: 'freemium', label: 'Freemium' }
   ];
   
   const starsOptions = [
-    { id: '', label: 'All Stars' },
+    { id: 'all', label: 'All Stars' },
     { id: '1000+', label: '1000+' },
     { id: '5000+', label: '5000+' },
     { id: '10000+', label: '10,000+' }
@@ -78,81 +80,202 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
       <h3 className="text-sm font-medium text-gray-700 mb-2">Filters</h3>
       
       <div className="space-y-4">
-        {/* Framework filter - now a dropdown */}
+        {/* Framework filter - Radix Select */}
         <div>
           <label htmlFor="framework-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
             Framework
           </label>
-          <select
-            id="framework-filter"
-            value={filters.framework}
-            onChange={(e) => handleFilterChange('framework', e.target.value)}
-            className="block w-full rounded-md border-gray-300 py-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          <Select.Root 
+            value={filters.framework} 
+            onValueChange={(value) => handleFilterChange('framework', value)}
           >
-            <option value="">All Frameworks</option>
-            {frameworks.map((framework) => (
-              <option key={framework.id} value={framework.slug}>
-                {framework.name}
-              </option>
-            ))}
-          </select>
+            <Select.Trigger 
+              id="framework-filter"
+              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              aria-label="Framework"
+            >
+              <Select.Value placeholder="All Frameworks" />
+              <Select.Icon>
+                <ChevronDownIcon />
+              </Select.Icon>
+            </Select.Trigger>
+            
+            <Select.Portal>
+              <Select.Content 
+                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                position="popper"
+                sideOffset={5}
+              >
+                <Select.ScrollUpButton className="flex items-center justify-center h-6 bg-white text-gray-700 cursor-default">
+                  <ChevronUpIcon />
+                </Select.ScrollUpButton>
+                
+                <Select.Viewport className="p-1">
+                  <Select.Item 
+                    value="all" 
+                    className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
+                  >
+                    <Select.ItemText>All Frameworks</Select.ItemText>
+                    <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                      <CheckIcon />
+                    </Select.ItemIndicator>
+                  </Select.Item>
+                  
+                  {frameworks.map((framework) => (
+                    <Select.Item 
+                      key={framework.id} 
+                      value={framework.slug}
+                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
+                    >
+                      <Select.ItemText>{framework.name}</Select.ItemText>
+                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                        <CheckIcon />
+                      </Select.ItemIndicator>
+                    </Select.Item>
+                  ))}
+                </Select.Viewport>
+                
+                <Select.ScrollDownButton className="flex items-center justify-center h-6 bg-white text-gray-700 cursor-default">
+                  <ChevronDownIcon />
+                </Select.ScrollDownButton>
+              </Select.Content>
+            </Select.Portal>
+          </Select.Root>
         </div>
         
-        {/* Theme filter - now a dropdown */}
+        {/* Theme filter - Radix Select */}
         <div>
           <label htmlFor="theme-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
             Theme
           </label>
-          <select
-            id="theme-filter"
-            value={filters.theme}
-            onChange={(e) => handleFilterChange('theme', e.target.value)}
-            className="block w-full rounded-md border-gray-300 py-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          <Select.Root 
+            value={filters.theme} 
+            onValueChange={(value) => handleFilterChange('theme', value)}
           >
-            {themeOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <Select.Trigger 
+              id="theme-filter"
+              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              aria-label="Theme"
+            >
+              <Select.Value placeholder="All Themes" />
+              <Select.Icon>
+                <ChevronDownIcon />
+              </Select.Icon>
+            </Select.Trigger>
+            
+            <Select.Portal>
+              <Select.Content 
+                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                position="popper"
+                sideOffset={5}
+              >
+                <Select.Viewport className="p-1">
+                  {themeOptions.map((option) => (
+                    <Select.Item 
+                      key={option.id} 
+                      value={option.id}
+                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
+                    >
+                      <Select.ItemText>{option.label}</Select.ItemText>
+                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                        <CheckIcon />
+                      </Select.ItemIndicator>
+                    </Select.Item>
+                  ))}
+                </Select.Viewport>
+              </Select.Content>
+            </Select.Portal>
+          </Select.Root>
         </div>
         
-        {/* Pricing filter - now a dropdown */}
+        {/* Pricing filter - Radix Select */}
         <div>
           <label htmlFor="pricing-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
             Pricing
           </label>
-          <select
-            id="pricing-filter"
-            value={filters.pricing}
-            onChange={(e) => handleFilterChange('pricing', e.target.value)}
-            className="block w-full rounded-md border-gray-300 py-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          <Select.Root 
+            value={filters.pricing} 
+            onValueChange={(value) => handleFilterChange('pricing', value)}
           >
-            {pricingOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <Select.Trigger 
+              id="pricing-filter"
+              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              aria-label="Pricing"
+            >
+              <Select.Value placeholder="All Pricing" />
+              <Select.Icon>
+                <ChevronDownIcon />
+              </Select.Icon>
+            </Select.Trigger>
+            
+            <Select.Portal>
+              <Select.Content 
+                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                position="popper"
+                sideOffset={5}
+              >
+                <Select.Viewport className="p-1">
+                  {pricingOptions.map((option) => (
+                    <Select.Item 
+                      key={option.id} 
+                      value={option.id}
+                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
+                    >
+                      <Select.ItemText>{option.label}</Select.ItemText>
+                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                        <CheckIcon />
+                      </Select.ItemIndicator>
+                    </Select.Item>
+                  ))}
+                </Select.Viewport>
+              </Select.Content>
+            </Select.Portal>
+          </Select.Root>
         </div>
         
-        {/* GitHub Stars filter - now a dropdown */}
+        {/* GitHub Stars filter - Radix Select */}
         <div>
           <label htmlFor="stars-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
             GitHub Stars
           </label>
-          <select
-            id="stars-filter"
-            value={filters.stars}
-            onChange={(e) => handleFilterChange('stars', e.target.value)}
-            className="block w-full rounded-md border-gray-300 py-1.5 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          <Select.Root 
+            value={filters.stars} 
+            onValueChange={(value) => handleFilterChange('stars', value)}
           >
-            {starsOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <Select.Trigger 
+              id="stars-filter"
+              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              aria-label="GitHub Stars"
+            >
+              <Select.Value placeholder="All Stars" />
+              <Select.Icon>
+                <ChevronDownIcon />
+              </Select.Icon>
+            </Select.Trigger>
+            
+            <Select.Portal>
+              <Select.Content 
+                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+                position="popper"
+                sideOffset={5}
+              >
+                <Select.Viewport className="p-1">
+                  {starsOptions.map((option) => (
+                    <Select.Item 
+                      key={option.id} 
+                      value={option.id}
+                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
+                    >
+                      <Select.ItemText>{option.label}</Select.ItemText>
+                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                        <CheckIcon />
+                      </Select.ItemIndicator>
+                    </Select.Item>
+                  ))}
+                </Select.Viewport>
+              </Select.Content>
+            </Select.Portal>
+          </Select.Root>
         </div>
       </div>
       
