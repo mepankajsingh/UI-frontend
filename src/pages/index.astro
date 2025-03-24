@@ -6,23 +6,27 @@ import { supabase } from '../lib/supabase';
 
 export const prerender = false;
 
-// Get popular frameworks
-const { data: frameworks } = await supabase
-  .from('frameworks')
-  .select('*')
-  .order('name')
-  .limit(6);
+// Fetch frameworks and libraries in parallel
+const [frameworksResponse, librariesResponse] = await Promise.all([
+  supabase
+    .from('frameworks')
+    .select('*')
+    .order('name')
+    .limit(6),
+  
+  supabase
+    .from('libraries')
+    .select(`
+      *,
+      frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
+      tags:library_tags(tag_id(id, name, slug))
+    `)
+    .order('github_stars', { ascending: false })
+    .limit(6)
+]);
 
-// Get popular libraries
-const { data: libraries } = await supabase
-  .from('libraries')
-  .select(`
-    *,
-    frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
-    tags:library_tags(tag_id(id, name, slug))
-  `)
-  .order('github_stars', { ascending: false })
-  .limit(6);
+const frameworks = frameworksResponse.data;
+const libraries = librariesResponse.data;
 ---
 
 <Layout title="UI Library Directory - Find the Best UI Components for Your Project">
@@ -55,7 +59,7 @@ const { data: libraries } = await supabase
       </div>
     </div>
 
-    <!-- Frameworks section -->
+    <!-- Frameworks section - streamed -->
     <div class="bg-gray-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div class="mb-6 flex justify-between items-center">
@@ -65,21 +69,27 @@ const { data: libraries } = await supabase
           </a>
         </div>
         
-        {frameworks && frameworks.length > 0 ? (
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {frameworks.map(framework => (
-              <FrameworkCard framework={framework} />
-            ))}
-          </div>
-        ) : (
-          <div class="text-center py-6">
-            <p class="text-gray-500 text-xs">Loading frameworks...</p>
-          </div>
-        )}
+        {(async () => {
+          if (frameworks && frameworks.length > 0) {
+            return (
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {frameworks.map(framework => (
+                  <FrameworkCard framework={framework} />
+                ))}
+              </div>
+            );
+          } else {
+            return (
+              <div class="text-center py-6">
+                <p class="text-gray-500 text-xs">Loading frameworks...</p>
+              </div>
+            );
+          }
+        })()}
       </div>
     </div>
 
-    <!-- Libraries section -->
+    <!-- Libraries section - streamed -->
     <div class="bg-white">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div class="mb-6 flex justify-between items-center">
@@ -89,17 +99,23 @@ const { data: libraries } = await supabase
           </a>
         </div>
         
-        {libraries && libraries.length > 0 ? (
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {libraries.map(library => (
-              <LibraryCard library={library} />
-            ))}
-          </div>
-        ) : (
-          <div class="text-center py-6">
-            <p class="text-gray-500 text-xs">Loading libraries...</p>
-          </div>
-        )}
+        {(async () => {
+          if (libraries && libraries.length > 0) {
+            return (
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {libraries.map(library => (
+                  <LibraryCard library={library} />
+                ))}
+              </div>
+            );
+          } else {
+            return (
+              <div class="text-center py-6">
+                <p class="text-gray-500 text-xs">Loading libraries...</p>
+              </div>
+            );
+          }
+        })()}
       </div>
     </div>
   </main>

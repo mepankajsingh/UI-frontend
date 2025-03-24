@@ -1,51 +1,63 @@
 import { useState, useEffect } from 'react';
 
-export default function SortingControl() {
-  const [sortBy, setSortBy] = useState('popular');
-
+export default function SortingControl({ onSortChange, initialSort = 'popular' }) {
+  const [activeSort, setActiveSort] = useState(initialSort);
+  
+  // Reset state when component is mounted to ensure consistent state after navigation
   useEffect(() => {
-    // Load saved sort preference from localStorage on component mount
-    const savedSort = localStorage.getItem('uiriver-sort');
+    setActiveSort(initialSort);
+    
+    // If there was a previously selected sort in localStorage, use that
+    const savedSort = localStorage.getItem('librarySort');
     if (savedSort) {
-      setSortBy(savedSort);
-      // Dispatch event to apply sorting immediately
+      setActiveSort(savedSort);
+      // Also dispatch the event to apply the sort immediately
       dispatchSortEvent(savedSort);
     }
-  }, []);
-
-  const handleSortChange = (e) => {
-    const newSortBy = e.target.value;
-    setSortBy(newSortBy);
-    
-    // Save to localStorage
-    localStorage.setItem('uiriver-sort', newSortBy);
-    
-    // Dispatch custom event for sorting
-    dispatchSortEvent(newSortBy);
-  };
-
-  const dispatchSortEvent = (sortValue) => {
+  }, [initialSort]);
+  
+  const sortOptions = [
+    { id: 'popular', label: 'Popular' },
+    { id: 'latest', label: 'Latest' },
+    { id: 'components', label: 'Components' },
+    { id: 'downloads', label: 'Downloads' },
+    { id: 'forks', label: 'Forks' }
+  ];
+  
+  const dispatchSortEvent = (sortId) => {
     const event = new CustomEvent('sortChange', {
-      detail: { sortBy: sortValue }
+      detail: { sortBy: sortId }
     });
     document.dispatchEvent(event);
   };
-
+  
+  const handleSortChange = (sortId) => {
+    setActiveSort(sortId);
+    
+    // Save to localStorage for persistence
+    localStorage.setItem('librarySort', sortId);
+    
+    // Dispatch the custom event
+    dispatchSortEvent(sortId);
+  };
+  
   return (
-    <div className="flex items-center justify-between">
-      <div className="flex-1">
-        <h2 className="text-sm font-medium text-gray-700">Sort by</h2>
-        <select
-          value={sortBy}
-          onChange={handleSortChange}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-        >
-          <option value="popular">Most Popular</option>
-          <option value="latest">Recently Updated</option>
-          <option value="components">Component Count</option>
-          <option value="downloads">Downloads</option>
-          <option value="forks">Forks</option>
-        </select>
+    <div className="flex items-center space-x-1 mb-4">
+      <span className="text-sm text-gray-500 mr-2">Sort by:</span>
+      <div className="flex flex-wrap gap-1">
+        {sortOptions.map((option) => (
+          <button
+            key={option.id}
+            onClick={() => handleSortChange(option.id)}
+            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+              activeSort === option.id
+                ? 'bg-indigo-100 text-indigo-700'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
     </div>
   );

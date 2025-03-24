@@ -1,37 +1,19 @@
 ---
 interface Props {
-  library: {
-    id: string;
-    name: string;
-    slug: string;
-    description: string;
-    icon_url?: string;
-    logo_url?: string;
-    github_stars?: number;
-    npm_downloads?: number;
-    npm_package_name?: string;
-    total_components?: number;
-    frameworks?: {
-      framework_id: {
-        name: string;
-        slug: string;
-      };
-      is_primary: boolean;
-    }[];
-    tags?: {
-      tag_id: {
-        name: string;
-        slug: string;
-      };
-    }[];
-  };
+  library: any;
+  'data-stars'?: number;
+  'data-updated'?: string;
+  'data-components'?: number;
+  'data-downloads'?: number;
+  'data-forks'?: number;
 }
 
-const { library } = Astro.props;
-const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
+import { isTrendingPackage, getOptimizedNpmStats } from '../lib/npmStats';
+
+const { library, ...attributes } = Astro.props;
 
 // Format numbers for display
-function formatNumber(num: number): string {
+function formatNumber(num) {
   if (!num) return '0';
   if (num >= 1000000) {
     return (num / 1000000).toFixed(1) + 'M';
@@ -42,16 +24,69 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-// Get frameworks to display (primary first, then others, limit to 2)
-const frameworksToDisplay = library.frameworks 
-  ? [...library.frameworks].sort((a, b) => (a.is_primary ? -1 : 1)).slice(0, 2)
-  : [];
+// Get primary framework
+const primaryFramework = library.frameworks?.find(fw => fw.is_primary)?.framework_id;
+const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
+
+// Check for manual labels
+const hasManualLabels = library.labels && library.labels.length > 0;
+
+// Get the first manual label (if any)
+const firstLabel = hasManualLabels ? library.labels[0].label_id : null;
+
+// Check if library is trending based on npm download growth
+let isTrending = false;
+let npmStats = [];
+
+// Fix: Use npm_package_name instead of npm_package
+if (library.npm_package_name) {
+  // Get npm stats regardless of manual labels
+  npmStats = await getOptimizedNpmStats(library.npm_package_name);
+  isTrending = isTrendingPackage(npmStats);
+}
+
+// Get all framework slugs for this library for filtering
+const frameworkSlugs = library.frameworks?.map(fw => fw.framework_id.slug).join(' ') || '';
+
+// Debug: Log values to help diagnose issues
+console.log(`Library: ${library.name}, npm_package_name: ${library.npm_package_name}, isTrending: ${isTrending}`);
 ---
 
-<a href={`/libraries/${library.slug}`} class="block group">
-  <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
-    <div class="flex items-start">
-      <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
+<div 
+  class="bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 relative"
+  data-stars={library.github_stars || 0}
+  data-updated={library.last_update || ''}
+  data-components={library.total_components || 0}
+  data-downloads={library.npm_downloads || 0}
+  data-forks={library.github_forks || 0}
+  data-framework-slugs={frameworkSlugs}
+  data-pricing={library.pricing || ''}
+  data-styling={library.styling || ''}
+>
+  <!-- Trending Label (automatic) - Show only if trending and no manual labels -->
+  {isTrending && !hasManualLabels && (
+    <div class="absolute top-0 right-0 mt-1 mr-1">
+      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium bg-rose-500 text-white">
+        Trending
+      </span>
+    </div>
+  )}
+
+  <!-- Manual Label (if available) -->
+  {hasManualLabels && firstLabel && (
+    <div class="absolute top-0 right-0 mt-1 mr-1">
+      <span 
+        class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium"
+        style={`background-color: ${firstLabel.color}; color: ${firstLabel.text_color || 'white'};`}
+      >
+        {firstLabel.name}
+      </span>
+    </div>
+  )}
+
+  <a href={`/libraries/${library.slug}`} class="block group">
+    <div class="p-4 flex flex-col items-center">
+      <div class="w-12 h-12 flex items-center justify-center mb-3">
         <img 
           src={imageUrl} 
           alt={`${library.name} logo`} 
@@ -59,56 +94,69 @@ const frameworksToDisplay = library.frameworks
           onerror="this.onerror=null; this.src='/favicon.svg';"
         />
       </div>
-      <div class="flex-1 min-w-0">
-        <h3 class="text-sm font-medium text-gray-900 group-hover:text-indigo-600 truncate">
-          {library.name}
-        </h3>
-        {frameworksToDisplay.length > 0 && (
-          <div class="flex items-center gap-1 flex-wrap">
-            {frameworksToDisplay.map((fw, index) => (
-              <>
-                <span class="text-xs text-gray-500 truncate">
-                  {fw.framework_id.name}
-                </span>
-                {index < frameworksToDisplay.length - 1 && (
-                  <span class="text-xs text-gray-400">•</span>
-                )}
-              </>
-            ))}
-            {library.frameworks && library.frameworks.length > 2 && (
-              <span class="text-xs text-gray-400">+{library.frameworks.length - 2}</span>
-            )}
-          </div>
-        )}
-      </div>
-      {library.github_stars && (
-        <div class="flex items-center text-gray-700 text-xs">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z"/>
-          </svg>
-          {formatNumber(library.github_stars)}
-        </div>
-      )}
-    </div>
-    
-    <div class="mt-3 flex flex-wrap gap-3">
-      {library.total_components && (
-        <div class="flex items-center text-gray-600 text-xs">
-          <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-          </svg>
-          <span>{library.total_components} Components</span>
-        </div>
-      )}
+      <h3 class="text-sm font-medium text-gray-900 text-center group-hover:text-indigo-600 mb-1">
+        {library.name}
+      </h3>
       
-      {library.npm_downloads && (
-        <div class="flex items-center text-gray-600 text-xs">
-          <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-          </svg>
-          <span>{formatNumber(library.npm_downloads)} Downloads</span>
+      <!-- Framework name if available -->
+      {primaryFramework && (
+        <div class="text-xs text-gray-500 text-center">
+          {primaryFramework.name}
         </div>
       )}
     </div>
+  </a>
+  
+  <!-- Stats row -->
+  <div class="px-4 pb-4 flex items-center justify-center space-x-4 text-xs text-gray-500">
+    <!-- Components -->
+    {library.total_components && (
+      <div class="flex items-center group relative">
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+        </svg>
+        <span>{formatNumber(library.total_components)}</span>
+        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-indigo-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium">
+          <div class="absolute w-3 h-3 bg-indigo-700 transform rotate-45 -bottom-1 left-1/2 -ml-1.5"></div>
+          {library.total_components.toLocaleString()} Components
+        </div>
+      </div>
+    )}
+    
+    <!-- Downloads -->
+    {library.npm_downloads && (
+      <div class="flex items-center group relative">
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        <span>{formatNumber(library.npm_downloads)}</span>
+        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-indigo-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium">
+          <div class="absolute w-3 h-3 bg-indigo-700 transform rotate-45 -bottom-1 left-1/2 -ml-1.5"></div>
+          {library.npm_downloads.toLocaleString()} Downloads
+        </div>
+      </div>
+    )}
+    
+    <!-- Forks -->
+    {library.github_forks && (
+      <div class="flex items-center group relative">
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+        </svg>
+        <span>{formatNumber(library.github_forks)}</span>
+        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-indigo-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium">
+          <div class="absolute w-3 h-3 bg-indigo-700 transform rotate-45 -bottom-1 left-1/2 -ml-1.5"></div>
+          {library.github_forks.toLocaleString()} Forks
+        </div>
+      </div>
+    )}
   </div>
-</a>
+</div>
+
+<style>
+  /* Add text-2xs class for smaller text */
+  .text-2xs {
+    font-size: 0.65rem;
+    line-height: 0.85rem;
+  }
+</style>

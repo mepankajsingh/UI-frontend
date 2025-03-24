@@ -1,8 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import TagCard from '../../components/TagCard.astro';
 import DownloadStatsChart from '../../components/DownloadStatsChart.jsx';
 import RelatedLibraries from '../../components/RelatedLibraries.astro';
+import GalleryImage from '../../components/GalleryImage.jsx';
 import { supabase } from '../../lib/supabase';
 import { getNpmDownloads, getTotalDownloads, formatDownloads } from '../../lib/npmStats';
 
@@ -10,19 +10,34 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 
-// Get library details with multiple frameworks
-const { data: library } = await supabase
-  .from('libraries')
-  .select(`
-    *,
-    frameworks:library_frameworks(
-      is_primary,
-      framework_id(id, name, slug)
-    ),
-    tags:library_tags(tag_id(id, name, slug))
-  `)
-  .eq('slug', slug)
-  .single();
+// Format stars count - moved outside of async operations for immediate use
+function formatNumber(num) {
+  if (!num) return '0';
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'k';
+  }
+  return num.toString();
+}
+
+// Use Promise.all to fetch data in parallel
+const [libraryResponse] = await Promise.all([
+  supabase
+    .from('libraries')
+    .select(`
+      *,
+      frameworks:library_frameworks(
+        is_primary,
+        framework_id(id, name, slug)
+      )
+    `)
+    .eq('slug', slug)
+    .single()
+]);
+
+const library = libraryResponse.data;
 
 // If library not found, return 404
 if (!library) {
@@ -42,30 +57,15 @@ if (library.gallery_images) {
       // Try to parse the JSON string
       galleryImages = JSON.parse(library.gallery_images);
     }
+    
+    // Convert simple string array to object array with url property
+    if (galleryImages.length > 0 && typeof galleryImages[0] === 'string') {
+      galleryImages = galleryImages.map(url => ({ url }));
+    }
   } catch (error) {
     console.error('Error parsing gallery images:', error);
     galleryImages = [];
   }
-}
-
-// Get npm download stats if package name is available
-let totalDownloads = 0;
-
-if (library.npm_package_name) {
-  const downloadsData = await getNpmDownloads(library.npm_package_name);
-  totalDownloads = getTotalDownloads(downloadsData);
-}
-
-// Format stars count
-function formatNumber(num) {
-  if (!num) return '0';
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
-  }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'k';
-  }
-  return num.toString();
 }
 
 // Sort frameworks with primary first
@@ -77,14 +77,20 @@ const sortedFrameworks = library.frameworks ?
 const primaryFramework = sortedFrameworks.length > 0 ? 
   sortedFrameworks.find(fw => fw.is_primary)?.framework_id : 
   null;
+
+// Fetch npm stats asynchronously - will be streamed in
+const npmStatsPromise = library.npm_package_name ? 
+  getNpmDownloads(library.npm_package_name) : 
+  Promise.resolve(null);
 ---
 
-<Layout title={`${library.name} - UI Component Library`}>
+<Layout title={`${library.name} - UIriver`}>
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div class="p-6">
         <div class="flex items-center mb-4">
-          <div class="w-12 h-12 flex items-center justify-center mr-4">
+          <!-- Increased logo size -->
+          <div class="w-16 h-16 flex items-center justify-center mr-4">
             <img 
               src={imageUrl} 
               alt={`${library.name} logo`} 
@@ -119,11 +125,11 @@ const primaryFramework = sortedFrameworks.length > 0 ?
         
         <p class="text-sm text-gray-600 mb-4">{library.description}</p>
         
-        <!-- Key metrics at the top -->
-        <div class="flex flex-wrap gap-4 mb-6">
+        <!-- Enhanced Key metrics with smaller font size and removed "Updated" word -->
+        <div class="flex flex-wrap gap-6 mb-6 bg-gray-50 p-4 rounded-lg">
           {library.total_components && (
-            <div class="flex items-center text-gray-600 text-sm">
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <div class="flex items-center text-gray-700 text-xs">
+              <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
               </svg>
               <span>{library.total_components} Components</span>
@@ -131,8 +137,8 @@ const primaryFramework = sortedFrameworks.length > 0 ?
           )}
           
           {library.npm_downloads && (
-            <div class="flex items-center text-gray-600 text-sm">
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <div class="flex items-center text-gray-700 text-xs">
+              <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
               </svg>
               <span>{formatNumber(library.npm_downloads)} Downloads</span>
@@ -140,8 +146,8 @@ const primaryFramework = sortedFrameworks.length > 0 ?
           )}
           
           {library.github_forks && (
-            <div class="flex items-center text-gray-600 text-sm">
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <div class="flex items-center text-gray-700 text-xs">
+              <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
               </svg>
               <span>{formatNumber(library.github_forks)} Forks</span>
@@ -149,17 +155,17 @@ const primaryFramework = sortedFrameworks.length > 0 ?
           )}
           
           {library.last_update && (
-            <div class="flex items-center text-gray-600 text-sm">
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <div class="flex items-center text-gray-700 text-xs">
+              <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
-              <span>Updated {new Date(library.last_update).toLocaleDateString()}</span>
+              <span>{new Date(library.last_update).toLocaleDateString()}</span>
             </div>
           )}
           
           {library.latest_version && (
-            <div class="flex items-center text-gray-600 text-sm">
-              <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <div class="flex items-center text-gray-700 text-xs">
+              <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
               </svg>
               <span>v{library.latest_version}</span>
@@ -167,15 +173,16 @@ const primaryFramework = sortedFrameworks.length > 0 ?
           )}
         </div>
         
+        <!-- Converted buttons to links with grey styling -->
         <div class="flex flex-wrap gap-3 mb-6">
           {library.website_url && (
             <a 
               href={library.website_url} 
               target="_blank" 
               rel="noopener noreferrer"
-              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+              class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
             >
-              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
               </svg>
               Website
@@ -187,9 +194,9 @@ const primaryFramework = sortedFrameworks.length > 0 ?
               href={library.github_url} 
               target="_blank" 
               rel="noopener noreferrer"
-              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+              class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
             >
-              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
                 <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
               </svg>
               GitHub
@@ -201,9 +208,11 @@ const primaryFramework = sortedFrameworks.length > 0 ?
               href={library.npm_url} 
               target="_blank" 
               rel="noopener noreferrer"
-              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+              class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
             >
-              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
+              </svg>
                 <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
               </svg>
               npm
@@ -214,10 +223,10 @@ const primaryFramework = sortedFrameworks.length > 0 ?
             <a 
               href={library.docs_url} 
               target="_blank" 
-              rel="noopener noreferrer"<boltAction type="file" filePath="src/pages/libraries/[slug].astro">
-              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
+              rel="noopener noreferrer"
+              class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
             >
-              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+              <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v5a2 2 0 0 0 2 2h5v9H6z"/>
               </svg>
               Documentation
@@ -225,29 +234,31 @@ const primaryFramework = sortedFrameworks.length > 0 ?
           )}
         </div>
         
-        {/* Gallery section - MOVED ABOVE download stats */}
+        {/* Gallery section with clickable images */}
         {galleryImages.length > 0 && (
           <div class="mb-6">
             <h2 class="text-sm font-medium text-gray-900 mb-3">Gallery</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {galleryImages.map((image, index) => (
-                <div class="border border-gray-200 rounded-md overflow-hidden">
-                  <img 
-                    src={image.url} 
-                    alt={image.alt || `${library.name} screenshot ${index + 1}`}
-                    class="w-full h-40 object-cover"
-                    onerror="this.onerror=null; this.style.display='none';"
-                  />
-                </div>
+                <GalleryImage 
+                  image={image} 
+                  index={index} 
+                  libraryName={library.name}
+                  client:visible
+                />
               ))}
             </div>
           </div>
         )}
         
-        {/* Download stats chart - MOVED BELOW gallery */}
+        {/* Download stats chart with streaming */}
         {library.npm_package_name && (
           <div class="mb-6">
-            <DownloadStatsChart packageName={library.npm_package_name} client:load />
+            {/* Use Astro's streaming capabilities */}
+            {(async () => {
+              const downloadsData = await npmStatsPromise;
+              return <DownloadStatsChart packageName={library.npm_package_name} client:load />;
+            })()}
           </div>
         )}
       </div>
@@ -290,33 +301,22 @@ const primaryFramework = sortedFrameworks.length > 0 ?
             </div>
           )}
         </div>
-        
-        {/* Tags section */}
-        {library.tags && library.tags.length > 0 && (
-          <div class="mb-6">
-            <h2 class="text-sm font-medium text-gray-900 mb-3">Tags</h2>
-            <div class="flex flex-wrap gap-2">
-              {library.tags.map(({ tag_id }) => (
-                <a 
-                  href={`/tags/${tag_id.slug}`}
-                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
-                >
-                  {tag_id.name}
-                </a>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
     
-    {/* Related Libraries section - outside the main card */}
+    {/* Related Libraries section with streaming */}
     {primaryFramework && (
-      <RelatedLibraries 
-        currentLibraryId={library.id} 
-        frameworkId={primaryFramework.id} 
-        limit={3} 
-      />
+      <div>
+        {(async () => {
+          return (
+            <RelatedLibraries 
+              currentLibraryId={library.id} 
+              frameworkId={primaryFramework.id} 
+              limit={5} 
+            />
+          );
+        })()}
+      </div>
     )}
   </main>
 </Layout>

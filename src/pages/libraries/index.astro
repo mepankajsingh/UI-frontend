@@ -1,11 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
+import SortingControl from '../../components/SortingControl.jsx';
+import FilterComponent from '../../components/FilterComponent.jsx';
 import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
 
-// Get all libraries with their frameworks
+// Get all libraries with their frameworks and labels
 const { data: libraries } = await supabase
   .from('libraries')
   .select(`
@@ -14,7 +16,10 @@ const { data: libraries } = await supabase
       is_primary,
       framework_id(id, name, slug)
     ),
-    tags:library_tags(tag_id(id, name, slug))
+    tags:library_tags(tag_id(id, name, slug)),
+    labels:library_labels(
+      label_id(id, name, color, text_color)
+    )
   `)
   .order('name');
 
@@ -31,25 +36,174 @@ const { data: tags } = await supabase
   .order('name');
 ---
 
-<Layout title="UI Component Libraries">
+<Layout title="Find UI Libraries for Your Project">
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="mb-8">
-      <h1 class="text-2xl font-bold text-gray-900 mb-2">UI Component Libraries</h1>
+      <h1 class="text-2xl font-bold text-gray-900 mb-2">UI Libraries</h1>
       <p class="text-gray-600">
-        Discover the best UI component libraries for your next project.
+        Discover the best UI libraries for your next project.
       </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {libraries && libraries.map(library => (
-        <LibraryCard library={library} />
-      ))}
-    </div>
-
-    {(!libraries || libraries.length === 0) && (
-      <div class="text-center py-12">
-        <p class="text-gray-500">No libraries found.</p>
+    <div class="lg:flex gap-6">
+      <!-- Filters sidebar -->
+      <div class="lg:w-64 flex-shrink-0 mb-6 lg:mb-0">
+        <FilterComponent frameworks={frameworks} client:load />
       </div>
-    )}
+
+      <!-- Main content -->
+      <div class="flex-1">
+        <!-- Sorting controls -->
+        <div class="mb-6">
+          <SortingControl client:load />
+        </div>
+
+        <!-- Library grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 library-grid">
+          {libraries && libraries.map(library => (
+            <LibraryCard library={library} />
+          ))}
+        </div>
+
+        {(!libraries || libraries.length === 0) && (
+          <div class="text-center py-12">
+            <p class="text-gray-500">No libraries found.</p>
+          </div>
+        )}
+      </div>
+    </div>
   </main>
 </Layout>
+
+<script>
+  // Function to initialize filtering and sorting
+  function initializeLibraryFiltering() {
+    console.log("Initializing library filtering and sorting...");
+    const libraryGrid = document.querySelector('.library-grid');
+    const libraryCards = Array.from(libraryGrid?.children || []);
+    
+    // Current state
+    let currentFilters = {
+      framework: '',
+      theme: '',
+      pricing: '',
+      stars: ''
+    };
+    let currentSort = 'popular';
+    
+    // Apply filters and sorting
+    function applyFiltersAndSort() {
+      if (!libraryGrid || !libraryCards.length) return;
+      
+      // Clone the original array to avoid modifying it
+      let filteredCards = [...libraryCards];
+      
+      // Apply framework filter
+      if (currentFilters.framework && currentFilters.framework !== 'all') {
+        filteredCards = filteredCards.filter(card => {
+          // Check if the card has the selected framework
+          const frameworkSlugs = card.dataset.frameworkSlugs || '';
+          return frameworkSlugs.includes(currentFilters.framework);
+        });
+      }
+      
+      // Apply theme filter
+      if (currentFilters.theme && currentFilters.theme !== 'all') {
+        filteredCards = filteredCards.filter(card => {
+          // Check if the card has the selected theme style
+          return card.dataset.styling === currentFilters.theme;
+        });
+      }
+      
+      // Apply pricing filter
+      if (currentFilters.pricing && currentFilters.pricing !== 'all') {
+        filteredCards = filteredCards.filter(card => {
+          // Check if the card matches the pricing model
+          return card.dataset.pricing === currentFilters.pricing;
+        });
+      }
+      
+      // Apply stars filter
+      if (currentFilters.stars && currentFilters.stars !== 'all') {
+        filteredCards = filteredCards.filter(card => {
+          const stars = parseInt(card.dataset.stars || '0', 10);
+          
+          switch (currentFilters.stars) {
+            case '1000+':
+              return stars >= 1000;
+            case '5000+':
+              return stars >= 5000;
+            case '10000+':
+              return stars >= 10000;
+            default:
+              return true;
+          }
+        });
+      }
+      
+      // Apply sorting
+      filteredCards.sort((a, b) => {
+        switch (currentSort) {
+          case 'latest':
+            return new Date(b.dataset.updated || 0) - new Date(a.dataset.updated || 0);
+          case 'components':
+            return (parseInt(b.dataset.components || '0', 10) - parseInt(a.dataset.components || '0', 10));
+          case 'downloads':
+            return (parseInt(b.dataset.downloads || '0', 10) - parseInt(a.dataset.downloads || '0', 10));
+          case 'forks':
+            return (parseInt(b.dataset.forks || '0', 10) - parseInt(a.dataset.forks || '0', 10));
+          case 'popular':
+          default:
+            return (parseInt(b.dataset.stars || '0', 10) - parseInt(a.dataset.stars || '0', 10));
+        }
+      });
+      
+      // Clear the grid
+      libraryGrid.innerHTML = '';
+      
+      // Add filtered and sorted cards back to the grid
+      filteredCards.forEach(card => {
+        libraryGrid.appendChild(card);
+      });
+      
+      // Show "no results" message if needed
+      if (filteredCards.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'text-center py-12 col-span-full';
+        noResults.innerHTML = '<p class="text-gray-500">No libraries match your filters.</p>';
+        libraryGrid.appendChild(noResults);
+      }
+    }
+    
+    // Remove any existing event listeners to prevent duplicates
+    document.removeEventListener('filterChange', handleFilterChange);
+    document.removeEventListener('sortChange', handleSortChange);
+    
+    // Define event handlers
+    function handleFilterChange(event) {
+      currentFilters = event.detail.filters;
+      applyFiltersAndSort();
+    }
+    
+    function handleSortChange(event) {
+      currentSort = event.detail.sortBy;
+      applyFiltersAndSort();
+    }
+    
+    // Add event listeners
+    document.addEventListener('filterChange', handleFilterChange);
+    document.addEventListener('sortChange', handleSortChange);
+    
+    console.log("Library filtering and sorting initialized!");
+  }
+  
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', initializeLibraryFiltering);
+  
+  // Re-initialize after Astro page transitions
+  document.addEventListener('astro:page-load', initializeLibraryFiltering);
+  
+  // Also initialize immediately when script runs
+  // This ensures it works both on direct page load and after navigation
+  initializeLibraryFiltering();
+</script>
