@@ -42,7 +42,7 @@ let npmStats = [];
 if (library.npm_package_name) {
   // Get npm stats regardless of manual labels
   npmStats = await getOptimizedNpmStats(library.npm_package_name);
-  isTrending = npmStats ? isTrendingPackage(npmStats) : false;
+  isTrending = isTrendingPackage(npmStats);
 }
 
 // Get all framework slugs for this library for filtering

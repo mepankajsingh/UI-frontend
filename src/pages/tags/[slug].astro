@@ -19,42 +19,51 @@ if (!tag) {
   return Astro.redirect('/404');
 }
 
-// Get libraries for this tag
-const { data: libraries } = await supabase
-  .from('libraries')
+// Get libraries for this tag with labels
+const { data: libraryRelations } = await supabase
+  .from('library_tags')
   .select(`
-    *,
-    frameworks:library_frameworks(
-      is_primary,
-      framework_id(id, name, slug)
-    ),
-    tags:library_tags(tag_id(id, name, slug)),
-    labels:library_labels(
-      label_id(id, name, color, text_color)
+    library_id,
+    libraries:library_id(
+      *,
+      frameworks:library_frameworks(
+        is_primary,
+        framework_id(id, name, slug)
+      ),
+      tags:library_tags(tag_id(id, name, slug)),
+      labels:library_labels(
+        label_id(id, name, color, text_color)
+      )
     )
   `)
-  .eq('library_tags.tag_id.slug', slug)
-  .order('github_stars', { ascending: false });
+  .eq('tag_id', tag.id);
+
+// Extract the actual library objects and filter out any nulls
+const libraries = libraryRelations
+  ? libraryRelations
+      .map(item => item.libraries)
+      .filter(library => library !== null)
+  : [];
 ---
 
-<Layout title={`${tag.name} UI Libraries - UIriver`}>
+<Layout title={`${tag.name} UI Libraries`}>
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="mb-8">
       <h1 class="text-2xl font-bold text-gray-900 mb-2">{tag.name} UI Libraries</h1>
       <p class="text-gray-600">
-        {tag.description || `Discover UI libraries tagged with ${tag.name}.`}
+        Discover UI component libraries tagged with {tag.name}.
       </p>
     </div>
 
-    {libraries && libraries.length > 0 ? (
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {libraries.map(library => (
-          <LibraryCard library={library} />
-        ))}
-      </div>
-    ) : (
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {libraries && libraries.map(library => (
+        <LibraryCard library={library} />
+      ))}
+    </div>
+
+    {(!libraries || libraries.length === 0) && (
       <div class="text-center py-12">
-        <p class="text-gray-500">No libraries found with the tag {tag.name}.</p>
+        <p class="text-gray-500">No libraries found with this tag.</p>
       </div>
     )}
   </main>

@@ -2,21 +2,21 @@
 import LibraryCard from './LibraryCard.astro';
 import { supabase } from '../lib/supabase';
 
-const { currentLibraryId, frameworkId, limit = 4 } = Astro.props;
+interface Props {
+  currentLibraryId: number;
+  frameworkId: number;
+  limit?: number;
+}
 
-// Get related libraries for the same framework, excluding current library
+const { currentLibraryId, frameworkId, limit = 3 } = Astro.props;
+
+// Get related libraries (same framework, excluding current)
 const { data: relatedLibraries } = await supabase
   .from('libraries')
   .select(`
     *,
-    frameworks:library_frameworks(
-      is_primary,
-      framework_id(id, name, slug)
-    ),
-    tags:library_tags(tag_id(id, name, slug)),
-    labels:library_labels(
-      label_id(id, name, color, text_color)
-    )
+    frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
+    tags:library_tags(tag_id(id, name, slug))
   `)
   .eq('library_frameworks.framework_id', frameworkId)
   .neq('id', currentLibraryId)
@@ -26,8 +26,8 @@ const { data: relatedLibraries } = await supabase
 
 {relatedLibraries && relatedLibraries.length > 0 && (
   <div class="mt-8">
-    <h2 class="text-xl font-bold text-gray-900 mb-4">Related Libraries</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <h2 class="text-lg font-bold text-gray-900 mb-4">Related Libraries</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
       {relatedLibraries.map(library => (
         <LibraryCard library={library} />
       ))}

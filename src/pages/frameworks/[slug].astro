@@ -1,7 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
-import { supa<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">base } from '../../lib/supabase';
+import SortingControl from '../../components/SortingControl.jsx';
+import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
 
@@ -10,7 +11,10 @@ const { slug } = Astro.params;
 // Get framework details
 const { data: framework } = await supabase
   .from('frameworks')
-  .select('*')
+  .select(`
+    *,
+    tags:framework_tags(tag_id(id, name, slug))
+  `)
   .eq('slug', slug)
   .single();
 
@@ -19,68 +23,244 @@ if (!framework) {
   return Astro.redirect('/404');
 }
 
-// Get libraries for this framework
-const { data: libraries } = await supabase
-  .from('libraries')
+// Get libraries for this framework with labels
+const { data: libraryRelations } = await supabase
+  .from('library_frameworks')
   .select(`
-    *,
-    frameworks:library_frameworks(
-      is_primary,
-      framework_id(id, name, slug)
-    ),
-    tags:library_tags(tag_id(id, name, slug)),
-    labels:library_labels(
-      label_id(id, name, color, text_color)
+    library_id,
+    is_primary,
+    libraries:library_id(
+      *,
+      frameworks:library_frameworks(
+        is_primary,
+        framework_id(id, name, slug)
+      ),
+      tags:library_tags(tag_id(id, name, slug)),
+      labels:library_labels(
+        label_id(id, name, color, text_color)
+      )
     )
   `)
-  .eq('library_frameworks.framework_id.slug', slug)
-  .order('github_stars', { ascending: false });
+  .eq('framework_id', framework.id);
 
-// Get primary libraries (where this framework is the primary one)
-const primaryLibraries = libraries?.filter(lib => 
-  lib.frameworks.some(fw => fw.is_primary && fw.framework_id.slug === slug)
-) || [];
+// Extract the actual library objects and filter out any nulls
+const libraries = libraryRelations
+  ? libraryRelations
+      .map(item => item.libraries)
+      .filter(library => library !== null)
+  : [];
 
-// Get secondary libraries (where this framework is not the primary one)
-const secondaryLibraries = libraries?.filter(lib => 
-  !lib.frameworks.some(fw => fw.is_primary && fw.framework_id.slug === slug)
-) || [];
-
-// Combine with primary libraries first
-const sortedLibraries = [...primaryLibraries, ...secondaryLibraries];
-
-const imageUrl = framework.icon_url || framework.logo_url || '/favicon.svg';
+// Format numbers for display
+function formatNumber(num) {
+  if (!num) return '0';
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'k';
+  }
+  return num.toString();
+}
 ---
 
-<Layout title={`${framework.name} UI Libraries - UIriver`}>
+<Layout title={framework.title || `${framework.name} UI Libraries`}>
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="mb-8 flex items-start">
-      <div class="w-16 h-16 flex items-center justify-center mr-4">
-        <img 
-          src={imageUrl} 
-          alt={`${framework.name} logo`} 
-          class="max-w-full max-h-full object-contain"
-          onerror="this.onerror=null; this.src='/favicon.svg';"
-        />
-      </div>
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">{framework.name} UI Libraries</h1>
-        <p class="text-gray-600">
-          {framework.description || `Discover the best UI libraries for ${framework.name}.`}
-        </p>
+    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden mb-8">
+      <div class="p-6">
+        <div class="flex items-center mb-4">
+          {framework.icon_url && (
+            <div class="w-12 h-12 flex-shrink-0 mr-4">
+              <img 
+                src={framework.icon_url} 
+                alt={`${framework.name} logo`} 
+                class="w-full h-full object-contain"
+              />
+            </div>
+          )}
+          <div>
+            <h1 class="text-xl font-bold text-gray-900">{framework.name}</h1>
+            <p class="text-sm text-gray-500">
+              {libraries.length} {libraries.length === 1 ? 'library' : 'libraries'} available
+            </p>
+          </div>
+          <div class="ml-auto flex space-x-4">
+            {framework.github_stars && (
+              <div class="flex items-center text-gray-600 text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z"/>
+                </svg>
+                {formatNumber(framework.github_stars)}
+              </div>
+            )}
+            {framework.npm_downloads && (
+              <div class="flex items-center text-gray-600 text-sm">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                {formatNumber(framework.npm_downloads)}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <p class="text-sm text-gray-600 mb-6">{framework.description}</p>
+        
+        <div class="flex flex-wrap gap-3">
+          {framework.website_url && (
+            <a 
+              href={framework.website_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200 hover:text-gray-900"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+              </svg>
+              Website
+            </a>
+          )}
+          
+          {framework.github_url && (
+            <a 
+              href={framework.github_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200 hover:text-gray-900"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+              </svg>
+              GitHub
+            </a>
+          )}
+          
+          {framework.npm_url && (
+            <a 
+              href={framework.npm_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200 hover:text-gray-900"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
+              </svg>
+              npm
+            </a>
+          )}
+          
+          {framework.docs_url && (
+            <a 
+              href={framework.docs_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-gray-600 bg-gray-100 hover:bg-gray-200 hover:text-gray-900"
+            >
+              <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v5a2 2 0 0 0 2 2h5v9H6z"/>
+              </svg>
+              Documentation
+            </a>
+          )}
+        </div>
       </div>
     </div>
-
-    {sortedLibraries.length > 0 ? (
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {sortedLibraries.map(library => (
-          <LibraryCard library={library} />
-        ))}
-      </div>
+    
+    <h2 class="text-lg font-medium text-gray-900 mb-4">{framework.name} Libraries</h2>
+    
+    {libraries.length > 0 ? (
+      <>
+        <SortingControl client:load />
+        <div id="libraries-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {libraries.map(library => (
+            <LibraryCard 
+              library={library} 
+              data-stars={library.github_stars || 0}
+              data-updated={library.last_update || ''}
+              data-components={library.total_components || 0}
+              data-downloads={library.npm_downloads || 0}
+              data-forks={library.github_forks || 0}
+            />
+          ))}
+        </div>
+      </>
     ) : (
       <div class="text-center py-12">
-        <p class="text-gray-500">No libraries found for {framework.name}.</p>
+        <p class="text-gray-500">No libraries found for this framework.</p>
       </div>
     )}
   </main>
 </Layout>
+
+<script define:vars={{ libraries }}>
+  // Make library data available to the client-side script
+  window.libraryData = JSON.parse(JSON.stringify(libraries));
+  
+  // Initialize sorting functionality
+  function initSorting() {
+    // Get all library cards
+    const librariesGrid = document.getElementById('libraries-grid');
+    if (!librariesGrid) return;
+    
+    // Store the original order of libraries
+    const originalLibraries = Array.from(librariesGrid.children);
+    
+    // Function to sort libraries
+    function sortLibraries(sortBy) {
+      const libraries = Array.from(librariesGrid.children);
+      
+      libraries.sort((a, b) => {
+        if (sortBy === 'popular') {
+          // Sort by GitHub stars (default)
+          const aStars = parseInt(a.getAttribute('data-stars') || '0');
+          const bStars = parseInt(b.getAttribute('data-stars') || '0');
+          return bStars - aStars;
+        } 
+        else if (sortBy === 'latest') {
+          // Sort by last update date
+          const aDate = new Date(a.getAttribute('data-updated') || '1970-01-01');
+          const bDate = new Date(b.getAttribute('data-updated') || '1970-01-01');
+          return bDate - aDate;
+        }
+        else if (sortBy === 'components') {
+          // Sort by number of components
+          const aComponents = parseInt(a.getAttribute('data-components') || '0');
+          const bComponents = parseInt(b.getAttribute('data-components') || '0');
+          return bComponents - aComponents;
+        }
+        else if (sortBy === 'downloads') {
+          // Sort by npm downloads
+          const aDownloads = parseInt(a.getAttribute('data-downloads') || '0');
+          const bDownloads = parseInt(b.getAttribute('data-downloads') || '0');
+          return bDownloads - aDownloads;
+        }
+        else if (sortBy === 'forks') {
+          // Sort by GitHub forks
+          const aForks = parseInt(a.getAttribute('data-forks') || '0');
+          const bForks = parseInt(b.getAttribute('data-forks') || '0');
+          return bForks - aForks;
+        }
+        
+        return 0;
+      });
+      
+      // Clear the grid and append sorted libraries
+      librariesGrid.innerHTML = '';
+      libraries.forEach(lib => librariesGrid.appendChild(lib));
+    }
+    
+    // Listen for custom event from the React component
+    document.addEventListener('sortChange', (e) => {
+      sortLibraries(e.detail.sortBy);
+    });
+  }
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', initSorting);
+  
+  // Also initialize on Astro page transitions
+  document.addEventListener('astro:page-load', initSorting);
+  
+  // Run immediately for initial page load
+  initSorting();
+</script>
