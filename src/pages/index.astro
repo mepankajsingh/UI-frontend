@@ -1,121 +1,130 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import FrameworkCard from '../components/FrameworkCard.astro';
-import LibraryCard from '../components/LibraryCard.astro';
+import Card from '../components/Card.astro';
+import SearchBar from '../components/SearchBar.jsx';
 import { supabase } from '../lib/supabase';
 
 export const prerender = false;
 
-// Fetch frameworks and libraries in parallel
-const [frameworksResponse, librariesResponse] = await Promise.all([
-  supabase
-    .from('frameworks')
-    .select('*')
-    .order('name')
-    .limit(6),
-  
-  supabase
-    .from('libraries')
-    .select(`
-      *,
-      frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
-      tags:library_tags(tag_id(id, name, slug))
-    `)
-    .order('github_stars', { ascending: false })
-    .limit(6)
-]);
+// Get featured libraries
+const { data: featuredLibraries } = await supabase
+  .from('libraries')
+  .select(`
+    *,
+    frameworks:library_frameworks(
+      is_primary,
+      framework_id(id, name, slug)
+    ),
+    tags:library_tags(tag_id(id, name, slug)),
+    labels:library_labels(
+      label_id(id, name, color, text_color)
+    )
+  `)
+  .eq('is_featured', true)
+  .order('github_stars', { ascending: false })
+  .limit(8);
 
-const frameworks = frameworksResponse.data;
-const libraries = librariesResponse.data;
+// Get popular frameworks
+const { data: popularFrameworks } = await supabase
+  .from('frameworks')
+  .select(`
+    *,
+    libraries:library_frameworks(count)
+  `)
+  .order('popularity_score', { ascending: false })
+  .limit(6);
+
+// Process frameworks to get library count
+const processedFrameworks = popularFrameworks?.map(framework => ({
+  ...framework,
+  libraryCount: framework.libraries?.length || 0
+})) || [];
 ---
 
-<Layout title="UI Library Directory - Find the Best UI Components for Your Project">
+<Layout title="UIriver - Find the Perfect UI Library for Your Project">
   <main>
     <!-- Hero section -->
     <div class="bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div class="text-center">
-          <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl md:text-4xl">
-            UI Library Directory
+          <h1 class="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+            Find the Perfect UI Library
           </h1>
-          <p class="mt-2 max-w-md mx-auto text-xs text-gray-600 sm:text-sm md:mt-4 md:text-base md:max-w-3xl">
-            Find the perfect UI component library for your next JavaScript project
+          <p class="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+            Discover and compare the best UI component libraries for your next project.
           </p>
-          <div class="mt-6 flex justify-center gap-3">
-            <a
-              href="/libraries"
-              class="inline-flex items-center px-4 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-            >
-              Browse Libraries
-            </a>
-            <a
-              href="/search"
-              class="inline-flex items-center px-4 py-1.5 border border-gray-300 text-xs font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Search
-            </a>
+          <div class="mt-8 max-w-md mx-auto">
+            <SearchBar client:load />
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Frameworks section - streamed -->
-    <div class="bg-gray-50">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div class="mb-6 flex justify-between items-center">
-          <h2 class="text-lg font-bold text-gray-900">Popular Frameworks</h2>
-          <a href="/frameworks" class="text-indigo-600 hover:text-indigo-500 font-medium text-xs">
-            View all frameworks →
-          </a>
+    <!-- Featured libraries section -->
+    <div class="bg-gray-50 py-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-bold text-gray-900">Featured UI Libraries</h2>
+          <p class="mt-2 text-gray-600">Popular and trending UI component libraries</p>
         </div>
         
-        {(async () => {
-          if (frameworks && frameworks.length > 0) {
-            return (
-              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {frameworks.map(framework => (
-                  <FrameworkCard framework={framework} />
-                ))}
-              </div>
-            );
-          } else {
-            return (
-              <div class="text-center py-6">
-                <p class="text-gray-500 text-xs">Loading frameworks...</p>
-              </div>
-            );
-          }
-        })()}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {featuredLibraries?.map(library => (
+            <Card
+              title={library.name}
+              description={library.description}
+              href={`/libraries/${library.slug}`}
+              image={library.logo_url || library.icon_url}
+              stars={library.github_stars}
+              frameworks={library.frameworks}
+              tags={library.tags}
+              labels={library.labels}
+            />
+          ))}
+        </div>
+        
+        <div class="mt-8 text-center">
+          <a href="/libraries" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            View all libraries
+          </a>
+        </div>
       </div>
     </div>
 
-    <!-- Libraries section - streamed -->
-    <div class="bg-white">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div class="mb-6 flex justify-between items-center">
-          <h2 class="text-lg font-bold text-gray-900">Popular Libraries</h2>
-          <a href="/libraries" class="text-indigo-600 hover:text-indigo-500 font-medium text-xs">
-            View all libraries →
-          </a>
+    <!-- Frameworks section -->
+    <div class="bg-white py-12">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-bold text-gray-900">Popular Frameworks</h2>
+          <p class="mt-2 text-gray-600">Find UI libraries for your favorite framework</p>
         </div>
         
-        {(async () => {
-          if (libraries && libraries.length > 0) {
-            return (
-              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {libraries.map(library => (
-                  <LibraryCard library={library} />
-                ))}
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {processedFrameworks?.map(framework => (
+            <a href={`/frameworks/${framework.slug}`} class="block bg-gray-50 border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+              <div class="p-6 flex items-center">
+                <div class="w-12 h-12 flex items-center justify-center mr-4">
+                  <img 
+                    src={framework.icon_url || framework.logo_url || '/favicon.svg'} 
+                    alt={`${framework.name} logo`} 
+                    class="max-w-full max-h-full object-contain"
+                    onerror="this.onerror=null; this.src='/favicon.svg';"
+                  />
+                </div>
+                <div>
+                  <h3 class="text-lg font-medium text-gray-900">{framework.name}</h3>
+                  <p class="text-sm text-gray-500">{framework.libraryCount} libraries</p>
+                </div>
               </div>
-            );
-          } else {
-            return (
-              <div class="text-center py-6">
-                <p class="text-gray-500 text-xs">Loading libraries...</p>
-              </div>
-            );
-          }
-        })()}
+            </a>
+          ))}
+        </div>
+        
+        <div class="mt-8 text-center">
+          <a href="/frameworks" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            View all frameworks
+          </a>
+        </div>
       </div>
     </div>
   </main>

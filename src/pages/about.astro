@@ -1,40 +1,40 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getPageData } from '../lib/supabase';
 
-export const prerender = true;
+export const prerender = false;
+
+// Get about page content from database
+const pageData = await getPageData('about');
 ---
 
-<Layout title="About - UI Library Directory">
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">About</h1>
-    </div>
-
-    <div class="prose prose-sm max-w-none">
+<Layout title="About UIriver">
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">{pageData.title}</h1>
+    
+    <div class="prose prose-indigo max-w-none">
+      <p>{pageData.content}</p>
+      
+      <h2>Our Mission</h2>
       <p>
-        UI Library Directory is a curated collection of UI component libraries for JavaScript frameworks.
-        Our goal is to help developers find the perfect UI components for their projects.
+        At UIriver, we aim to simplify the process of finding the right UI component library 
+        for your projects. With the ever-growing ecosystem of JavaScript frameworks and UI libraries, 
+        it can be challenging to choose the best option for your specific needs.
       </p>
       
-      <h2>How it works</h2>
-      <p>
-        We collect information about UI libraries from various sources, including GitHub, npm, and official websites.
-        Libraries are categorized by framework and tagged with relevant features to make them easy to discover.
-      </p>
+      <h2>What We Offer</h2>
+      <ul>
+        <li>Comprehensive database of UI libraries across multiple frameworks</li>
+        <li>Detailed information about each library including components, popularity, and more</li>
+        <li>Easy comparison between different libraries</li>
+        <li>Up-to-date statistics and download trends</li>
+      </ul>
       
-      <h2>Contact</h2>
+      <h2>Contact Us</h2>
       <p>
-        Have a suggestion or found an issue? Please reach out to us.
+        Have suggestions for improving UIriver or want to add a library to our database? 
+        Please reach out to us through our <a href="/contact">contact page</a>.
       </p>
-      
-      <div class="mt-6">
-        <a 
-          href="/contact" 
-          class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-        >
-          Contact Us
-        </a>
-      </div>
     </div>
   </main>
 </Layout>

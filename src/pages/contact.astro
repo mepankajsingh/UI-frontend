@@ -1,32 +1,24 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import ContactForm from '../components/ContactForm';
+import ContactForm from '../components/ContactForm.jsx';
 
-export const prerender = true;
+export const prerender = false;
 ---
 
-<Layout title="Contact - UI Library Directory">
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Contact Us</h1>
-      <p class="mt-2 text-sm text-gray-600">
-        Have a question or suggestion? We'd love to hear from you.
+<Layout title="Contact Us - UIriver">
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-3xl font-bold text-gray-900 mb-6">Contact Us</h1><boltAction type="file" filePath="src/pages/contact.astro">
+    <div class="prose prose-indigo max-w-none mb-8">
+      <p>
+        Have questions, suggestions, or want to add a library to our database? 
+        We'd love to hear from you! Fill out the form below and we'll get back to you as soon as possible.
       </p>
     </div>
-
+    
     <div class="bg-white shadow overflow-hidden sm:rounded-lg">
       <div class="px-4 py-5 sm:p-6">
         <ContactForm client:load />
       </div>
-    </div>
-    
-    <div class="mt-6 text-center">
-      <a 
-        href="/" 
-        class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-      >
-        Back to home
-      </a>
     </div>
   </main>
 </Layout>

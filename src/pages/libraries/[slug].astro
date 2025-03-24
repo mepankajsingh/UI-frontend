@@ -30,7 +30,7 @@ const [libraryResponse] = await Promise.all([
       *,
       frameworks:library_frameworks(
         is_primary,
-        framework_id(id, name, slug)
+        framework_id(id, name, slug, icon_url, logo_url)
       )
     `)
     .eq('slug', slug)
@@ -101,15 +101,26 @@ const npmStatsPromise = library.npm_package_name ?
           <div>
             <h1 class="text-xl font-bold text-gray-900">{library.name}</h1>
             {sortedFrameworks.length > 0 && (
-              <div class="flex flex-wrap gap-1 mt-1">
-                {sortedFrameworks.map(({ framework_id }) => (
-                  <a 
-                    href={`/frameworks/${framework_id.slug}`} 
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
-                  >
-                    {framework_id.name}
-                  </a>
-                ))}
+              <div class="flex flex-wrap gap-2 mt-1">
+                {sortedFrameworks.map(({ framework_id }) => {
+                  const frameworkImageUrl = framework_id.icon_url || framework_id.logo_url || '/favicon.svg';
+                  return (
+                    <a 
+                      href={`/frameworks/${framework_id.slug}`} 
+                      class="inline-flex items-center"
+                      title={framework_id.name}
+                    >
+                      <div class="w-6 h-6 flex items-center justify-center">
+                        <img 
+                          src={frameworkImageUrl} 
+                          alt={`${framework_id.name} logo`} 
+                          class="max-w-full max-h-full object-contain"
+                          onerror="this.onerror=null; this.src='/favicon.svg';"
+                        />
+                      </div>
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -130,7 +141,7 @@ const npmStatsPromise = library.npm_package_name ?
           {library.total_components && (
             <div class="flex items-center text-gray-700 text-xs">
               <svg class="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01<boltAction type="file" filePath="src/pages/libraries/[slug].astro">2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
               </svg>
               <span>{library.total_components} Components</span>
             </div>
@@ -211,8 +222,6 @@ const npmStatsPromise = library.npm_package_name ?
               class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
             >
               <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
-              </svg>
                 <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
               </svg>
               npm

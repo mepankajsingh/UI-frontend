@@ -1,14 +1,25 @@
 import { supabase } from './supabase';
 
-// Fetch npm download stats for a package
+// Cache for npm stats to avoid redundant API calls
+const npmStatsCache = new Map();
+const CACHE_EXPIRY = 3600000; // 1 hour in milliseconds
+
+/**
+ * Get npm download stats for a package
+ * @param {string} packageName - The npm package name
+ * @returns {Promise<Array>} - Array of daily download counts
+ */
 export async function getNpmDownloads(packageName) {
+  if (!packageName) return null;
+  
   try {
-    // Use a 30-day period for download stats
+    // Calculate date range (last 30 days)
     const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - 30);
+    end.setDate(end.getDate() - 1); // Yesterday
     
-    // Format dates as YYYY-MM-DD
+    const start = new Date();
+    start.setDate(start.getDate() - 30); // 30 days ago
+    
     const startDate = start.toISOString().split('T')[0];
     const endDate = end.toISOString().split('T')[0];
     
@@ -18,169 +29,149 @@ export async function getNpmDownloads(packageName) {
     );
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch npm stats: ${response.statusText}`);
+      throw new Error(`NPM API returned ${response.status}`);
     }
     
     const data = await response.json();
     return data.downloads || [];
   } catch (error) {
-    console.error(`Error fetching npm downloads for ${packageName}:`, error);
-    return [];
-  }
-}
-
-// Calculate total downloads from npm data
-export function getTotalDownloads(downloadsData) {
-  if (!downloadsData || !Array.isArray(downloadsData)) {
-    return 0;
-  }
-  
-  return downloadsData.reduce((sum, day) => sum + (day.downloads || 0), 0);
-}
-
-// Check if a package is trending (5% week-over-week growth)
-// Modified to exclude the most recent TWO days and look at the two weeks before that
-export function isTrendingPackage(downloadsData) {
-  // Debug: Log the data we're working with
-  console.log("Checking if trending with data:", downloadsData?.length || 0, "days");
-  
-  if (!downloadsData || !Array.isArray(downloadsData) || downloadsData.length < 16) {
-    console.log("Not enough data to determine trending status");
-    return false;
-  }
-  
-  // Exclude the most recent TWO days
-  const dataExcludingRecentDays = downloadsData.slice(0, -2);
-  
-  // Get the last 14 days of data (excluding the most recent two days)
-  const last14Days = dataExcludingRecentDays.slice(-14);
-  
-  // Calculate downloads for the more recent week (last 7 days excluding most recent two days)
-  const recentWeek = last14Days.slice(-7);
-  const recentWeekDownloads = recentWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
-  
-  // Calculate downloads for the previous week (7 days before the recent week)
-  const olderWeek = last14Days.slice(0, 7);
-  const olderWeekDownloads = olderWeek.reduce((sum, day) => sum + (day.downloads || 0), 0);
-  
-  // Debug: Log the calculations
-  console.log(`Recent week (excluding last 2 days): ${recentWeekDownloads}, Older week: ${olderWeekDownloads}`);
-  
-  // Prevent division by zero
-  if (olderWeekDownloads === 0) {
-    return false;
-  }
-  
-  // Calculate percentage increase
-  const percentageIncrease = ((recentWeekDownloads - olderWeekDownloads) / olderWeekDownloads) * 100;
-  console.log(`Percentage increase: ${percentageIncrease.toFixed(2)}%`);
-  
-  // Return true if increase is at least 5% (changed from 2%)
-  return percentageIncrease >= 5;
-}
-
-// Format download numbers for display
-export function formatDownloads(num) {
-  if (!num) return '0';
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M';
-  }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'k';
-  }
-  return num.toString();
-}
-
-// Get npm package details
-export async function getNpmPackageDetails(packageName) {
-  try {
-    // Fetch package details from npm registry
-    const response = await fetch(`https://registry.npmjs.org/${packageName}`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch package details: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Extract relevant information
-    const latestVersion = data['dist-tags']?.latest;
-    const versionData = latestVersion ? data.versions[latestVersion] : null;
-    
-    return {
-      name: data.name,
-      version: latestVersion,
-      description: data.description,
-      license: versionData?.license || data.license,
-      lastUpdate: data.time?.modified,
-      homepage: versionData?.homepage || data.homepage,
-      installCommand: `npm install ${packageName}`
-    };
-  } catch (error) {
-    console.error(`Error fetching package details for ${packageName}:`, error);
+    console.error(`Error fetching npm stats for ${packageName}:`, error);
     return null;
   }
 }
 
-// Cache npm stats in Supabase for better performance
-export async function cacheNpmStats(packageName, stats) {
-  try {
-    if (!packageName || !stats) return;
-    
-    const { error } = await supabase
-      .from('npm_stats_cache')
-      .upsert({
-        package_name: packageName,
-        stats_data: stats,
-        last_updated: new Date().toISOString()
-      }, {
-        onConflict: 'package_name'
-      });
-      
-    if (error) {
-      console.error('Error caching npm stats:', error);
-    }
-  } catch (error) {
-    console.error('Error in cacheNpmStats:', error);
+/**
+ * Check if a package is trending based on download growth
+ * @param {Array} downloadsData - Array of daily download counts
+ * @returns {boolean} - Whether the package is trending
+ */
+export function isTrendingPackage(downloadsData) {
+  if (!downloadsData || downloadsData.length < 14) {
+    return false;
   }
+  
+  // Exclude the last 2 days as they might have incomplete data
+  const relevantData = [...downloadsData].slice(0, -2);
+  
+  // Calculate average downloads for first and second week
+  const firstWeekData = relevantData.slice(-14, -7);
+  const secondWeekData = relevantData.slice(-7);
+  
+  const firstWeekAvg = firstWeekData.reduce((sum, day) => sum + day.downloads, 0) / firstWeekData.length;
+  const secondWeekAvg = secondWeekData.reduce((sum, day) => sum + day.downloads, 0) / secondWeekData.length;
+  
+  // Calculate growth percentage
+  if (firstWeekAvg === 0) return false;
+  
+  const growthPercentage = ((secondWeekAvg - firstWeekAvg) / firstWeekAvg) * 100;
+  
+  // Consider trending if growth is at least 5%
+  return growthPercentage >= 5;
 }
 
-// Get cached npm stats if available, otherwise fetch fresh data
+/**
+ * Get optimized npm stats with caching
+ * @param {string} packageName - The npm package name
+ * @returns {Promise<Array>} - Array of daily download counts
+ */
 export async function getOptimizedNpmStats(packageName) {
+  if (!packageName) return null;
+  
+  // Check cache first
+  const cacheKey = `npm-stats-${packageName}`;
+  const cachedData = npmStatsCache.get(cacheKey);
+  
+  if (cachedData && (Date.now() - cachedData.timestamp < CACHE_EXPIRY)) {
+    return cachedData.data;
+  }
+  
+  // If not in cache or expired, fetch new data
   try {
-    // Debug: Log the package name we're fetching
-    console.log(`Fetching stats for package: ${packageName}`);
-    
-    // Try to get from cache first
-    const { data: cachedData } = await supabase
-      .from('npm_stats_cache')
-      .select('stats_data, last_updated')
+    // Try to get from database first
+    const { data: dbStats } = await supabase
+      .from('npm_stats')
+      .select('stats_data')
       .eq('package_name', packageName)
       .single();
     
-    // If we have recent cache (less than 24 hours old), use it
-    if (cachedData) {
-      const lastUpdated = new Date(cachedData.last_updated);
-      const now = new Date();
-      const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
+    let downloadsData;
+    
+    if (dbStats && dbStats.stats_data) {
+      // Use database data if available
+      downloadsData = dbStats.stats_data;
+    } else {
+      // Fallback to API if not in database
+      downloadsData = await getNpmDownloads(packageName);
       
-      if (hoursSinceUpdate < 24) {
-        console.log(`Using cached data for ${packageName}, ${hoursSinceUpdate.toFixed(1)} hours old`);
-        return cachedData.stats_data;
+      // Store in database for future use if we got valid data
+      if (downloadsData && downloadsData.length > 0) {
+        await supabase
+          .from('npm_stats')
+          .upsert({
+            package_name: packageName,
+            stats_data: downloadsData,
+            last_updated: new Date().toISOString()
+          });
       }
     }
     
-    // Otherwise fetch fresh data
-    console.log(`Fetching fresh data for ${packageName}`);
-    const freshData = await getNpmDownloads(packageName);
+    // Store in memory cache
+    if (downloadsData) {
+      npmStatsCache.set(cacheKey, {
+        data: downloadsData,
+        timestamp: Date.now()
+      });
+    }
     
-    // Cache the fresh data for future use
-    await cacheNpmStats(packageName, freshData);
-    
-    return freshData;
+    return downloadsData;
   } catch (error) {
     console.error(`Error in getOptimizedNpmStats for ${packageName}:`, error);
-    // Fallback to direct fetch if anything goes wrong
-    return await getNpmDownloads(packageName);
+    
+    // Fallback to direct API call if database operations fail
+    const downloadsData = await getNpmDownloads(packageName);
+    
+    // Still cache the result even if DB operations failed
+    if (downloadsData) {
+      npmStatsCache.set(cacheKey, {
+        data: downloadsData,
+        timestamp: Date.now()
+      });
+    }
+    
+    return downloadsData;
   }
+}
+
+/**
+ * Get total downloads for a package over the last 30 days
+ * @param {string} packageName - The npm package name
+ * @returns {Promise<number>} - Total download count
+ */
+export async function getTotalDownloads(packageName) {
+  const downloads = await getOptimizedNpmStats(packageName);
+  
+  if (!downloads || !downloads.length) {
+    return 0;
+  }
+  
+  return downloads.reduce((sum, day) => sum + day.downloads, 0);
+}
+
+/**
+ * Format download count for display
+ * @param {number} count - Download count
+ * @returns {string} - Formatted string
+ */
+export function formatDownloads(count) {
+  if (!count) return '0';
+  
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(1) + 'M';
+  }
+  
+  if (count >= 1000) {
+    return (count / 1000).toFixed(1) + 'k';
+  }
+  
+  return count.toString();
 }

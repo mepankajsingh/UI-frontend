@@ -9,7 +9,7 @@ export default defineConfig({
   adapter: netlify({
     imageCDN: true,
     edgeMiddleware: true,
-    cacheOnDemandPages: true,
+    cacheOnDemandPages: false, // Disable caching for SSR
   }),
   integrations: [react(), tailwind()],
 });
