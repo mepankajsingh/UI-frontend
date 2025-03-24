@@ -3,32 +3,45 @@ import LibraryCard from './LibraryCard.astro';
 import { supabase } from '../lib/supabase';
 
 interface Props {
-  currentLibraryId: number;
-  frameworkId: number;
+  currentLibraryId: string;
+  frameworkId: string;
   limit?: number;
 }
 
 const { currentLibraryId, frameworkId, limit = 3 } = Astro.props;
 
-// Get related libraries (same framework, excluding current)
+// Get related libraries that share the same framework, ordered by last_update
 const { data: relatedLibraries } = await supabase
-  .from('libraries')
+  .from('library_frameworks')
   .select(`
-    *,
-    frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
-    tags:library_tags(tag_id(id, name, slug))
+    library_id,
+    libraries:library_id(
+      *,
+      frameworks:library_frameworks(
+        is_primary,
+        framework_id(id, name, slug)
+      ),
+      tags:library_tags(tag_id(id, name, slug))
+    )
   `)
-  .eq('library_frameworks.framework_id', frameworkId)
-  .neq('id', currentLibraryId)
-  .order('github_stars', { ascending: false })
+  .eq('framework_id', frameworkId)
+  .neq('library_id', currentLibraryId)
+  .order('libraries(last_update)', { ascending: false })
   .limit(limit);
+
+// Extract the actual library objects and filter out any nulls
+const libraries = relatedLibraries
+  ? relatedLibraries
+      .map(item => item.libraries)
+      .filter(library => library !== null)
+  : [];
 ---
 
-{relatedLibraries && relatedLibraries.length > 0 && (
+{libraries.length > 0 && (
   <div class="mt-8">
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Related Libraries</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {relatedLibraries.map(library => (
+    <h2 class="text-lg font-medium text-gray-900 mb-4">Related Libraries</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {libraries.map(library => (
         <LibraryCard library={library} />
       ))}
     </div>

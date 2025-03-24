@@ -20,21 +20,15 @@ const { title } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="/nprogress.css" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title} | UIriver</title>
-    <ViewTransitions fallback="swap" />
+    <title>{title}</title>
+    <ViewTransitions />
   </head>
-  <body class="bg-white min-h-screen flex flex-col text-base">
+  <body class="bg-white min-h-screen flex flex-col">
     <LoadingBar client:load />
     <Navigation />
     <div id="content" class="flex-grow md:ml-64 transition-all duration-300">
       <slot />
     </div>
     <Footer id="footer" class="md:ml-64 transition-all duration-300" />
-    <script>
-      // Add support for streaming by ensuring hydration happens properly
-      document.addEventListener('astro:page-load', () => {
-        // Re-initialize any client-side components or scripts if needed
-      });
-    </script>
   </body>
 </html>
