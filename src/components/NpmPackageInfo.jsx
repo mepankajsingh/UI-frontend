@@ -1,103 +1,111 @@
 import { useState, useEffect } from 'react';
-import { revalidatePaths } from '../lib/revalidate';
+import { getNpmPackageDetails } from '../lib/npmStats';
 
-export default function NpmPackageInfo({ packageName, currentPath }) {
-  const [packageInfo, setPackageInfo] = useState(null);
+export default function NpmPackageInfo({ packageName }) {
+  const [packageDetails, setPackageDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function fetchPackageInfo() {
-      try {
-        setLoading(true);
-        const response = await fetch(`https://registry.npmjs.org/${packageName}`);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch package info: ${response.statusText}`);
+    let isMounted = true;
+    
+    async function fetchData() {
+      if (!packageName) {
+        if (isMounted) {
+          setLoading(false);
+          setError('No package name provided');
         }
+        return;
+      }
+
+      try {
+        if (isMounted) setLoading(true);
         
-        const data = await response.json();
-        setPackageInfo(data);
-        setError(null);
+        const data = await getNpmPackageDetails(packageName);
+        
+        if (isMounted && data) {
+          setPackageDetails(data);
+          setLoading(false);
+          setError(null);
+        } else if (isMounted) {
+          setError(`No data available for ${packageName}`);
+          setLoading(false);
+        }
       } catch (err) {
-        console.error('Error fetching package info:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        console.error(`Error fetching package details for ${packageName}:`, err);
+        if (isMounted) {
+          setError(`Failed to load package details: ${err.message}`);
+          setLoading(false);
+        }
       }
     }
 
-    if (packageName) {
-      fetchPackageInfo();
-    }
+    fetchData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [packageName]);
 
-  // Function to trigger revalidation for this page
-  const handleRevalidate = async () => {
-    if (!currentPath) return;
-    
-    try {
-      const result = await revalidatePaths([currentPath]);
-      if (result.success) {
-        alert('Page will be revalidated shortly');
-      } else {
-        console.error('Revalidation failed:', result.error);
-      }
-    } catch (err) {
-      console.error('Error triggering revalidation:', err);
-    }
+  if (loading) {
+    return (
+      <div className="bg-gray-50 rounded-md p-3 flex items-center justify-center">
+        <div className="animate-pulse text-gray-400 text-sm">Loading package info...</div>
+      </div>
+    );
+  }
+
+  if (error || !packageDetails) {
+    return (
+      <div className="bg-gray-50 rounded-md p-3 flex items-center justify-center">
+        <div className="text-gray-400 text-sm">
+          {error || `No package information available for ${packageName}`}
+        </div>
+      </div>
+    );
+  }
+
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
-  if (loading) {
-    return <div className="animate-pulse bg-gray-100 h-32 rounded-md"></div>;
-  }
-
-  if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
-  }
-
-  if (!packageInfo) {
-    return <div>No package information available</div>;
-  }
-
-  const latestVersion = packageInfo['dist-tags']?.latest || 'Unknown';
-  const license = packageInfo.license || 'Not specified';
-  const lastUpdated = packageInfo.time?.modified 
-    ? new Date(packageInfo.time.modified).toLocaleDateString() 
-    : 'Unknown';
-
   return (
-    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-      <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-        <h3 className="text-lg leading-6 font-medium text-gray-900">
-          Package Information
-        </h3>
-        <button 
-          onClick={handleRevalidate}
-          className="text-xs bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded"
-        >
-          Refresh Data
-        </button>
-      </div>
-      <div className="border-t border-gray-200">
-        <dl>
-          <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt className="text-sm font-medium text-gray-500">Package name</dt>
-            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{packageName}</dd>
+    <div className="bg-white rounded-md p-3">
+      <h3 className="text-base font-medium text-gray-700 mb-2">Package Information</h3>
+      
+      <div className="space-y-2">
+        {packageDetails.version && (
+          <div className="flex">
+            <span className="w-32 font-medium text-gray-500 text-sm">Latest Version:</span>
+            <span className="text-gray-700 text-sm">{packageDetails.version}</span>
           </div>
-          <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt className="text-sm font-medium text-gray-500">Latest version</dt>
-            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{latestVersion}</dd>
+        )}
+        
+        {packageDetails.lastUpdate && (
+          <div className="flex">
+            <span className="w-32 font-medium text-gray-500 text-sm">Last Updated:</span>
+            <span className="text-gray-700 text-sm">{formatDate(packageDetails.lastUpdate)}</span>
           </div>
-          <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt className="text-sm font-medium text-gray-500">License</dt>
-            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{license}</dd>
+        )}
+        
+        {packageDetails.license && (
+          <div className="flex">
+            <span className="w-32 font-medium text-gray-500 text-sm">License:</span>
+            <span className="text-gray-700 text-sm">{packageDetails.license}</span>
           </div>
-          <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt className="text-sm font-medium text-gray-500">Last updated</dt>
-            <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{lastUpdated}</dd>
+        )}
+        
+        {packageDetails.installCommand && (
+          <div className="mt-3">
+            <span className="font-medium text-gray-500 text-sm block mb-1">Installation:</span>
+            <div className="bg-gray-50 rounded-md p-2 font-mono text-sm overflow-x-auto">
+              {packageDetails.installCommand}
+            </div>
           </div>
-        </dl>
+        )}
       </div>
     </div>
   );
