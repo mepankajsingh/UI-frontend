@@ -74,9 +74,18 @@ const sortedFrameworks = library.frameworks ?
   [];
 
 // Get primary framework for related libraries
-const primaryFramework = sortedFrameworks.length > 0 ? 
-  sortedFrameworks.find(fw => fw.is_primary)?.framework_id : 
-  sortedFrameworks[0]?.framework_id;
+let primaryFramework = null;
+if (sortedFrameworks.length > 0) {
+  // First try to find a framework marked as primary
+  const primaryFrameworkEntry = sortedFrameworks.find(fw => fw.is_primary === true);
+  
+  if (primaryFrameworkEntry && primaryFrameworkEntry.framework_id) {
+    primaryFramework = primaryFrameworkEntry.framework_id;
+  } else {
+    // If no primary framework is marked, use the first one
+    primaryFramework = sortedFrameworks[0].framework_id;
+  }
+}
 
 // Fetch npm stats asynchronously - will be streamed in
 const npmStatsPromise = library.npm_package_name ? 
@@ -86,6 +95,7 @@ const npmStatsPromise = library.npm_package_name ?
 console.log('Library data:', {
   id: library.id,
   name: library.name,
+  frameworks: sortedFrameworks,
   primaryFramework: primaryFramework ? primaryFramework.id : 'none',
   npmDownloads: library.npm_downloads
 });
@@ -215,10 +225,10 @@ console.log('Library data:', {
               href={library.npm_url} 
               target="_blank" 
               rel="noopener noreferrer"
-              class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
+              class="inline-flex items-center text-xs text-gray-600 hover<boltAction type="file" filePath="src/pages/libraries/[slug].astro">text-gray-800 hover:underline"
             >
               <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2<boltAction type="file" filePath="src/pages/libraries/[slug].astro">.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
+                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
               </svg>
               npm
             </a>
