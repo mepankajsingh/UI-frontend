@@ -84,7 +84,7 @@ const npmStatsPromise = library.npm_package_name ?
   Promise.resolve(null);
 ---
 
-<Layout title={library.name}>
+<Layout title={library.title || `${library.name} - UIriver`}>
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div class="p-6">
@@ -211,13 +211,14 @@ const npmStatsPromise = library.npm_package_name ?
               class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
             >
               <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
+                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" /><boltAction type="file" filePath="src/pages/libraries/[slug].astro">
               </svg>
               npm
             </a>
           )}
           
-          {library.docs_url && (<boltAction type="file" filePath="src/pages/libraries/[slug].astro">            <a 
+          {library.docs_url && (
+            <a 
               href={library.docs_url} 
               target="_blank" 
               rel="noopener noreferrer"
