@@ -11,9 +11,10 @@ interface Props {
     icon_url: string;
     logo_url: string;
   };
+  libraryCount?: number;
 }
 
-const { framework } = Astro.props;
+const { framework, libraryCount } = Astro.props;
 const imageUrl = framework.icon_url || framework.logo_url || '/favicon.svg';
 ---
 
@@ -30,5 +31,10 @@ const imageUrl = framework.icon_url || framework.logo_url || '/favicon.svg';
     <h3 class="text-sm font-medium text-gray-900 text-center group-hover:text-indigo-600">
       {framework.name}
     </h3>
+    {libraryCount !== undefined && (
+      <div class="mt-1 text-xs text-gray-500">
+        {libraryCount} {libraryCount === 1 ? 'library' : 'libraries'}
+      </div>
+    )}
   </div>
 </a>

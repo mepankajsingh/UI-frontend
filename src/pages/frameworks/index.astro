@@ -5,11 +5,28 @@ import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
 
-// Get all frameworks
-const { data: frameworks } = await supabase
+// Get all frameworks with library counts
+const { data: frameworksWithCounts } = await supabase
   .from('frameworks')
-  .select('*')
+  .select(`
+    *,
+    library_count:library_frameworks(count)
+  `)
   .order('name');
+
+// Process the data to extract library counts
+const frameworks = frameworksWithCounts?.map(framework => {
+  // Extract the count from the library_count array
+  const libraryCount = framework.library_count?.[0]?.count || 0;
+  
+  // Remove the library_count property from the framework object
+  const { library_count, ...frameworkData } = framework;
+  
+  return {
+    ...frameworkData,
+    libraryCount
+  };
+}) || [];
 ---
 
 <Layout title="UI Frameworks - UI Library Directory">
@@ -24,7 +41,10 @@ const { data: frameworks } = await supabase
     {frameworks && frameworks.length > 0 ? (
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {frameworks.map((framework) => (
-          <FrameworkCard framework={framework} />
+          <FrameworkCard 
+            framework={framework} 
+            libraryCount={framework.libraryCount}
+          />
         ))}
       </div>
     ) : (
