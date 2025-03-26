@@ -5,32 +5,95 @@ import { supabase } from '../lib/supabase';
 interface Props {
   currentLibraryId: number;
   frameworkId: number;
+  npmDownloads?: number;
   limit?: number;
 }
 
-const { currentLibraryId, frameworkId, limit = 3 } = Astro.props;
+const { currentLibraryId, frameworkId, npmDownloads = 0, limit = 5 } = Astro.props;
+
+console.log(`RelatedLibraries component called with:`, {
+  currentLibraryId,
+  frameworkId,
+  npmDownloads,
+  limit
+});
 
 // Get related libraries (same framework, excluding current)
-const { data: relatedLibraries } = await supabase
+const { data: relatedLibraries, error } = await supabase
   .from('libraries')
   .select(`
-    *,
+    id, name, slug, title, icon_url, meta_title, meta_description, description,
+    website_url, pricing, customization, installation_command, github_url, npm_url,
+    github_stars, github_forks, latest_version, last_update, npm_downloads,
+    styling, total_components, npm_package_name,
     frameworks:library_frameworks(framework_id(id, name, slug), is_primary),
     tags:library_tags(tag_id(id, name, slug))
   `)
   .eq('library_frameworks.framework_id', frameworkId)
-  .neq('id', currentLibraryId)
-  .order('github_stars', { ascending: false })
-  .limit(limit);
+  .neq('id', currentLibraryId);
+
+if (error) {
+  console.error('Error fetching related libraries:', error);
+}
+
+console.log(`Found ${relatedLibraries?.length || 0} libraries with framework_id ${frameworkId}`);
+
+// Filter and sort libraries
+let sortedLibraries = relatedLibraries || [];
+
+if (npmDownloads > 0 && sortedLibraries.length > 0) {
+  // Calculate download range for similarity (50% below to 200% above)
+  const minDownloads = npmDownloads * 0.5;
+  const maxDownloads = npmDownloads * 2;
+  
+  // Filter by download range
+  const filteredLibraries = sortedLibraries.filter(lib => {
+    const libDownloads = lib.npm_downloads || 0;
+    return libDownloads >= minDownloads && libDownloads <= maxDownloads;
+  });
+  
+  console.log(`After download range filter: ${filteredLibraries.length} libraries remain`);
+  
+  // If we have libraries in the download range, use those
+  if (filteredLibraries.length > 0) {
+    sortedLibraries = filteredLibraries.sort((a, b) => {
+      const aDiff = Math.abs((a.npm_downloads || 0) - npmDownloads);
+      const bDiff = Math.abs((b.npm_downloads || 0) - npmDownloads);
+      return aDiff - bDiff;
+    });
+  } else {
+    // If no libraries in download range, fall back to all libraries sorted by stars
+    console.log('No libraries in download range, falling back to sort by stars');
+    sortedLibraries = sortedLibraries.sort((a, b) => 
+      (b.github_stars || 0) - (a.github_stars || 0)
+    );
+  }
+} else {
+  // If no downloads data, sort by GitHub stars
+  sortedLibraries = sortedLibraries.sort((a, b) => 
+    (b.github_stars || 0) - (a.github_stars || 0)
+  );
+}
+
+// Limit the number of libraries
+const limitedLibraries = sortedLibraries.slice(0, limit);
+
+console.log(`Final related libraries count: ${limitedLibraries.length}`);
+if (limitedLibraries.length > 0) {
+  console.log(`First related library: ${limitedLibraries[0].name}`);
+}
 ---
 
-{relatedLibraries && relatedLibraries.length > 0 && (
-  <div class="mt-8">
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Related Libraries</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {relatedLibraries.map(library => (
+<div class="mt-8 bg-white border border-gray-200 rounded-lg p-6">
+  <h2 class="text-lg font-bold text-gray-900 mb-4">Similar Libraries</h2>
+  
+  {limitedLibraries && limitedLibraries.length > 0 ? (
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+      {limitedLibraries.map(library => (
         <LibraryCard library={library} />
       ))}
     </div>
-  </div>
-)}
+  ) : (
+    <p class="text-gray-500 text-sm">No similar libraries found for this framework.</p>
+  )}
+</div>

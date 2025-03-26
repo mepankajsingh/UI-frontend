@@ -76,12 +76,19 @@ const sortedFrameworks = library.frameworks ?
 // Get primary framework for related libraries
 const primaryFramework = sortedFrameworks.length > 0 ? 
   sortedFrameworks.find(fw => fw.is_primary)?.framework_id : 
-  null;
+  sortedFrameworks[0]?.framework_id;
 
 // Fetch npm stats asynchronously - will be streamed in
 const npmStatsPromise = library.npm_package_name ? 
   getNpmDownloads(library.npm_package_name) : 
   Promise.resolve(null);
+
+console.log('Library data:', {
+  id: library.id,
+  name: library.name,
+  primaryFramework: primaryFramework ? primaryFramework.id : 'none',
+  npmDownloads: library.npm_downloads
+});
 ---
 
 <Layout title={library.title || `${library.name} - UIriver`}>
@@ -173,7 +180,7 @@ const npmStatsPromise = library.npm_package_name ?
           )}
         </div>
         
-        <!-- Converted buttons to links with grey styling -->
+        <!-- Links section -->
         <div class="flex flex-wrap gap-3 mb-6">
           {library.website_url && (
             <a 
@@ -211,7 +218,7 @@ const npmStatsPromise = library.npm_package_name ?
               class="inline-flex items-center text-xs text-gray-600 hover:text-gray-800 hover:underline"
             >
               <svg class="h-3.5 w-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" /><boltAction type="file" filePath="src/pages/libraries/[slug].astro">
+                <path d="M0 0v24h24V0H0zm6.672 19.992H4.008V8.016h2<boltAction type="file" filePath="src/pages/libraries/[slug].astro">.016h2.664v11.976zm6.672 0H10.68V8.016h2.664v11.976zm6.672 0h-4.008V8.016h4.008v11.976z" />
               </svg>
               npm
             </a>
@@ -253,10 +260,7 @@ const npmStatsPromise = library.npm_package_name ?
         {library.npm_package_name && (
           <div class="mb-6">
             {/* Use Astro's streaming capabilities */}
-            {(async () => {
-              const downloadsData = await npmStatsPromise;
-              return <DownloadStatsChart packageName={library.npm_package_name} client:load />;
-            })()}
+            <DownloadStatsChart packageName={library.npm_package_name} client:load />
           </div>
         )}
       </div>
@@ -302,19 +306,23 @@ const npmStatsPromise = library.npm_package_name ?
       </div>
     </div>
     
-    {/* Related Libraries section with streaming */}
+    {/* Related Libraries section - IMPORTANT: Make sure this is outside the previous div */}
     {primaryFramework && (
-      <div>
-        {(async () => {
-          return (
-            <RelatedLibraries 
-              currentLibraryId={library.id} 
-              frameworkId={primaryFramework.id} 
-              limit={5} 
-            />
-          );
-        })()}
-      </div>
+      <RelatedLibraries 
+        currentLibraryId={library.id} 
+        frameworkId={primaryFramework.id}
+        npmDownloads={library.npm_downloads || 0}
+        limit={5} 
+      />
     )}
   </main>
 </Layout>
+
+<script>
+  // Add debugging to check if the related libraries section is being rendered
+  document.addEventListener('astro:page-load', () => {
+    console.log('Page loaded, checking for related libraries section');
+    const relatedSection = document.querySelector('.mt-8.bg-white.border.border-gray-200.rounded-lg.p-6');
+    console.log('Related libraries section found:', relatedSection !== null);
+  });
+</script>
