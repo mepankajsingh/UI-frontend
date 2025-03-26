@@ -10,7 +10,7 @@ export const prerender = false;
 
 const { slug } = Astro.params;
 
-// Format stars count - moved outside of async operations for immediate use<boltAction type="file" filePath="src/pages/libraries/[slug].astro">
+// Format stars count - moved outside of async operations for immediate use
 function formatNumber(num) {
   if (!num) return '0';
   if (num >= 1000000) {
@@ -84,7 +84,7 @@ const npmStatsPromise = library.npm_package_name ?
   Promise.resolve(null);
 ---
 
-<Layout title={`${library.name} - UIriver`}>
+<Layout title={library.name}>
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div class="p-6">
@@ -217,8 +217,7 @@ const npmStatsPromise = library.npm_package_name ?
             </a>
           )}
           
-          {library.docs_url && (
-            <a 
+          {library.docs_url && (<boltAction type="file" filePath="src/pages/libraries/[slug].astro">            <a 
               href={library.docs_url} 
               target="_blank" 
               rel="noopener noreferrer"
