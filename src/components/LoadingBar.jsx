@@ -1,85 +1,138 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 /**
  * Loading bar component that appears at the top of the page during navigation
  */
 export default function LoadingBar() {
-  const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  
-  useEffect(() => {
-    let timeout;
-    let interval;
+  const [visible, setVisible] = useState(false);
+  const [width, setWidth] = useState(0);
+  const mountedRef = useRef(true);
+  const timersRef = useRef([]);
+
+  // Helper to safely clear all timers
+  const clearAllTimers = () => {
+    timersRef.current.forEach(timer => {
+      if (timer.type === 'timeout') {
+        clearTimeout(timer.id);
+      } else if (timer.type === 'interval') {
+        clearInterval(timer.id);
+      }
+    });
+    timersRef.current = [];
+  };
+
+  // Helper to add a timer to our ref for tracking
+  const addTimer = (id, type) => {
+    timersRef.current.push({ id, type });
+    return id;
+  };
+
+  // Start the loading animation
+  const start = () => {
+    if (!mountedRef.current) return;
     
-    // Function to handle route changes
-    const handleRouteChangeStart = () => {
-      setLoading(true);
-      setProgress(0);
+    // Clear any existing timers
+    clearAllTimers();
+    
+    // Show the bar and reset width
+    setVisible(true);
+    setWidth(0);
+    
+    // Animate to 90%
+    const intervalId = setInterval(() => {
+      if (!mountedRef.current) return;
       
-      // Simulate progress
-      interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prev + 10;
-        });
+      setWidth(w => {
+        if (w >= 90) {
+          clearInterval(intervalId);
+          return 90;
+        }
+        return w + (90 - w) / 10;
+      });
+    }, 100);
+    
+    addTimer(intervalId, 'interval');
+  };
+
+  // Complete the loading animation
+  const complete = () => {
+    if (!mountedRef.current) return;
+    
+    // Clear any existing timers
+    clearAllTimers();
+    
+    // Animate to 100%
+    setWidth(100);
+    
+    // Hide after animation completes
+    const timeoutId = setTimeout(() => {
+      if (!mountedRef.current) return;
+      setVisible(false);
+      
+      // Reset width after hiding (with delay to ensure transition completes)
+      const resetId = setTimeout(() => {
+        if (!mountedRef.current) return;
+        setWidth(0);
       }, 100);
+      
+      addTimer(resetId, 'timeout');
+    }, 500);
+    
+    addTimer(timeoutId, 'timeout');
+  };
+
+  useEffect(() => {
+    // Mark component as mounted
+    mountedRef.current = true;
+    
+    // Handle navigation events
+    const handleBeforeNavigate = () => {
+      console.log('Navigation started');
+      start();
     };
     
-    const handleRouteChangeComplete = () => {
-      clearInterval(interval);
-      setProgress(100);
-      
-      // Reset after animation completes
-      timeout = setTimeout(() => {
-        setLoading(false);
-        setProgress(0);
-      }, 300); // Increased timeout to ensure animation completes
+    const handleAfterNavigate = () => {
+      console.log('Navigation completed');
+      complete();
     };
     
-    // Add event listeners for navigation
-    document.addEventListener('astro:before-swap', handleRouteChangeStart);
-    document.addEventListener('astro:after-swap', handleRouteChangeComplete);
+    // Register Astro navigation events
+    document.addEventListener('astro:before-swap', handleBeforeNavigate);
+    document.addEventListener('astro:after-swap', handleAfterNavigate);
+    document.addEventListener('astro:page-load', handleAfterNavigate);
     
-    // Handle initial page load completion
-    document.addEventListener('DOMContentLoaded', () => {
-      setLoading(false);
-      setProgress(0);
-    });
+    // Simulate initial loading for visual feedback
+    start();
     
-    // Also handle astro:page-load event which fires when the page is fully loaded
-    document.addEventListener('astro:page-load', () => {
-      clearInterval(interval);
-      setProgress(100);
-      
-      timeout = setTimeout(() => {
-        setLoading(false);
-        setProgress(0);
-      }, 300);
-    });
+    // Complete the initial loading after a short delay
+    const initialLoadTimer = setTimeout(() => {
+      complete();
+    }, 500);
     
-    // Clean up
+    addTimer(initialLoadTimer, 'timeout');
+    
+    // Clean up function
     return () => {
-      clearTimeout(timeout);
-      clearInterval(interval);
-      document.removeEventListener('astro:before-swap', handleRouteChangeStart);
-      document.removeEventListener('astro:after-swap', handleRouteChangeComplete);
-      document.removeEventListener('DOMContentLoaded', handleRouteChangeComplete);
-      document.removeEventListener('astro:page-load', handleRouteChangeComplete);
+      mountedRef.current = false;
+      clearAllTimers();
+      
+      // Remove event listeners
+      document.removeEventListener('astro:before-swap', handleBeforeNavigate);
+      document.removeEventListener('astro:after-swap', handleAfterNavigate);
+      document.removeEventListener('astro:page-load', handleAfterNavigate);
     };
   }, []);
   
-  if (!loading && progress === 0) return null;
-  
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-1">
+    <div 
+      className="fixed top-0 left-0 right-0 z-50 h-2 pointer-events-none"
+      style={{ opacity: visible ? 1 : 0, transition: 'opacity 300ms linear' }}
+    >
       <div 
-        className="h-full bg-blue-600 transition-all duration-300 ease-out"
+        className="h-full bg-blue-600"
         style={{ 
-          width: `${progress}%`,
-          transition: progress === 100 ? 'width 200ms ease-out' : 'width 400ms ease-in'
+          width: `${width}%`,
+          transition: width === 100 ? 'width 300ms ease-out' : 'width 600ms ease-in'
         }}
       />
     </div>
