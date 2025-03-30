@@ -1,63 +1,81 @@
-export async function handler(event) {
-  // Basic auth check - you should implement proper authentication
-  const authHeader = event.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+// Netlify Function for on-demand revalidation
+exports.handler = async function(event, context) {
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
     return {
-      statusCode: 401,
-      body: JSON.stringify({ message: 'Unauthorized' })
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
-
-  const token = authHeader.split(' ')[1];
-  // Use environment variable for the token
-  if (token !== process.env.REVALIDATION_TOKEN) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ message: 'Invalid token' })
-    };
-  }
-
+  
   try {
-    // Parse the request body to get the paths to revalidate
-    const { paths } = JSON.parse(event.body);
+    // Parse the request body
+    const body = JSON.parse(event.body);
+    const { paths } = body;
     
-    if (!paths || !Array.isArray(paths)) {
+    // Validate token from Authorization header
+    const authHeader = event.headers.authorization || '';
+    const token = authHeader.split(' ')[1];
+    
+    if (!token || token !== process.env.REVALIDATION_TOKEN) {
       return {
-        statusCode: 400,
-        body: JSON.stringify({ message: 'Invalid request. Expected an array of paths.' })
+        statusCode: 401,
+        body: JSON.stringify({ error: 'Unauthorized' })
       };
     }
-
-    // Call Netlify's On-demand Builder API to purge the cache for each path
-    const results = await Promise.all(paths.map(async (path) => {
-      const purgeUrl = `https://api.netlify.com/build_hooks/${process.env.NETLIFY_BUILD_HOOK_ID}?trigger_path=${encodeURIComponent(path)}`;
-      
-      const response = await fetch(purgeUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-      
+    
+    // Validate paths
+    if (!paths || !Array.isArray(paths) || paths.length === 0) {
       return {
-        path,
-        status: response.status,
-        ok: response.ok
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Invalid paths provided' })
       };
-    }));
-
+    }
+    
+    // Purge Netlify cache for the specified paths
+    const purgePromises = paths.map(async (path) => {
+      // Normalize path
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+      
+      try {
+        // Use Netlify's cache purge API
+        const response = await fetch(`https://api.netlify.com/api/v1/sites/${process.env.SITE_ID}/purge`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.NETLIFY_API_TOKEN}`
+          },
+          body: JSON.stringify({ paths: [normalizedPath] })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Failed to purge cache for ${normalizedPath}:`, errorText);
+          return { path: normalizedPath, success: false, error: errorText };
+        }
+        
+        return { path: normalizedPath, success: true };
+      } catch (error) {
+        console.error(`Error purging cache for ${normalizedPath}:`, error);
+        return { path: normalizedPath, success: false, error: error.message };
+      }
+    });
+    
+    const results = await Promise.all(purgePromises);
+    
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Revalidation triggered',
+        message: 'Cache invalidation processed',
         results
       })
     };
   } catch (error) {
-    console.error('Revalidation error:', error);
+    console.error('Error in revalidate function:', error);
+    
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Internal server error', error: error.message })
+      body: JSON.stringify({ error: 'Internal server error', message: error.message })
     };
   }
-}
+};
