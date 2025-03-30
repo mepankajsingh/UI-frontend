@@ -1,140 +1,52 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect } from 'react';
+import NProgress from 'nprogress';
 
-/**
- * Loading bar component that appears at the top of the page during navigation
- */
 export default function LoadingBar() {
-  const [visible, setVisible] = useState(false);
-  const [width, setWidth] = useState(0);
-  const mountedRef = useRef(true);
-  const timersRef = useRef([]);
-
-  // Helper to safely clear all timers
-  const clearAllTimers = () => {
-    timersRef.current.forEach(timer => {
-      if (timer.type === 'timeout') {
-        clearTimeout(timer.id);
-      } else if (timer.type === 'interval') {
-        clearInterval(timer.id);
-      }
-    });
-    timersRef.current = [];
-  };
-
-  // Helper to add a timer to our ref for tracking
-  const addTimer = (id, type) => {
-    timersRef.current.push({ id, type });
-    return id;
-  };
-
-  // Start the loading animation
-  const start = () => {
-    if (!mountedRef.current) return;
-    
-    // Clear any existing timers
-    clearAllTimers();
-    
-    // Show the bar and reset width
-    setVisible(true);
-    setWidth(0);
-    
-    // Animate to 90%
-    const intervalId = setInterval(() => {
-      if (!mountedRef.current) return;
-      
-      setWidth(w => {
-        if (w >= 90) {
-          clearInterval(intervalId);
-          return 90;
-        }
-        return w + (90 - w) / 10;
-      });
-    }, 100);
-    
-    addTimer(intervalId, 'interval');
-  };
-
-  // Complete the loading animation
-  const complete = () => {
-    if (!mountedRef.current) return;
-    
-    // Clear any existing timers
-    clearAllTimers();
-    
-    // Animate to 100%
-    setWidth(100);
-    
-    // Hide after animation completes
-    const timeoutId = setTimeout(() => {
-      if (!mountedRef.current) return;
-      setVisible(false);
-      
-      // Reset width after hiding (with delay to ensure transition completes)
-      const resetId = setTimeout(() => {
-        if (!mountedRef.current) return;
-        setWidth(0);
-      }, 100);
-      
-      addTimer(resetId, 'timeout');
-    }, 500);
-    
-    addTimer(timeoutId, 'timeout');
-  };
-
   useEffect(() => {
-    // Mark component as mounted
-    mountedRef.current = true;
+    NProgress.configure({ 
+      showSpinner: false,
+      minimum: 0.1,
+      easing: 'ease',
+      speed: 500
+    });
     
-    // Handle navigation events
-    const handleBeforeNavigate = () => {
-      console.log('Navigation started');
-      start();
-    };
+    // Setup navigation event listeners for Astro's view transitions
+    document.addEventListener('astro:page-load', () => {
+      NProgress.done();
+    });
     
-    const handleAfterNavigate = () => {
-      console.log('Navigation completed');
-      complete();
-    };
+    document.addEventListener('astro:before-preparation', () => {
+      NProgress.start();
+    });
     
-    // Register Astro navigation events
-    document.addEventListener('astro:before-swap', handleBeforeNavigate);
-    document.addEventListener('astro:after-swap', handleAfterNavigate);
-    document.addEventListener('astro:page-load', handleAfterNavigate);
+    document.addEventListener('astro:after-preparation', () => {
+      NProgress.set(0.4);
+    });
     
-    // Simulate initial loading for visual feedback
-    start();
+    document.addEventListener('astro:after-swap', () => {
+      NProgress.set(0.8);
+    });
     
-    // Complete the initial loading after a short delay
-    const initialLoadTimer = setTimeout(() => {
-      complete();
-    }, 500);
-    
-    addTimer(initialLoadTimer, 'timeout');
-    
-    // Clean up function
     return () => {
-      mountedRef.current = false;
-      clearAllTimers();
+      NProgress.done();
+      // Clean up event listeners
+      document.removeEventListener('astro:page-load', () => {
+        NProgress.done();
+      });
       
-      // Remove event listeners
-      document.removeEventListener('astro:before-swap', handleBeforeNavigate);
-      document.removeEventListener('astro:after-swap', handleAfterNavigate);
-      document.removeEventListener('astro:page-load', handleAfterNavigate);
+      document.removeEventListener('astro:before-preparation', () => {
+        NProgress.start();
+      });
+      
+      document.removeEventListener('astro:after-preparation', () => {
+        NProgress.set(0.4);
+      });
+      
+      document.removeEventListener('astro:after-swap', () => {
+        NProgress.set(0.8);
+      });
     };
   }, []);
-  
-  return (
-    <div 
-      className="fixed top-0 left-0 right-0 z-50 h-2 pointer-events-none"
-      style={{ opacity: visible ? 1 : 0, transition: 'opacity 300ms linear' }}
-    >
-      <div 
-        className="h-full bg-blue-600"
-        style={{ 
-          width: `${width}%`,
-          transition: width === 100 ? 'width 300ms ease-out' : 'width 600ms ease-in'
-        }}
-      />
-    </div>
-  );
+
+  return null;
 }

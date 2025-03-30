@@ -19,35 +19,35 @@
   [headers.values]
     "Cache-Control" = "public, max-age=31536000, immutable"
 
-# Cache control for images
-[[headers]]
-  for = "/*.jpg"
-  [headers.values]
-    "Cache-Control" = "public, max-age=604800"
-
-[[headers]]
-  for = "/*.png"
-  [headers.values]
-    "Cache-Control" = "public, max-age=604800"
-
-[[headers]]
-  for = "/*.svg"
-  [headers.values]
-    "Cache-Control" = "public, max-age=604800"
-
-# Cache control for fonts
-[[headers]]
-  for = "/*.woff"
-  [headers.values]
-    "Cache-Control" = "public, max-age=31536000, immutable"
-
+# Additional cache control for fonts and images
 [[headers]]
   for = "/*.woff2"
   [headers.values]
     "Cache-Control" = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    "Cache-Control" = "public, max-age=86400"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    "Cache-Control" = "public, max-age=86400"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    "Cache-Control" = "public, max-age=86400"
 
 # On-demand revalidation endpoint
 [[redirects]]
   from = "/api/revalidate"
   to = "/.netlify/functions/revalidate"
   status = 200
+
+# Improve TTFB by preconnecting to required origins
+[[headers]]
+  for = "/*"
+  [headers.values]
+    "Link" = "</favicon.svg>; rel=preload; as=image, <https://fonts.googleapis.com>; rel=preconnect; crossorigin, <https://fonts.gstatic.com>; rel=preconnect; crossorigin"

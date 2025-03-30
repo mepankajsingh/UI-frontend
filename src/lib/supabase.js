@@ -1,47 +1,53 @@
 import { createClient } from '@supabase/supabase-js';
+import { optimizedFetch, clearCache } from './supabase-sync-fix.js';
 
-const supabaseUrl = 'https://tcblwrhrgeaxfpcvmema.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRjYmx3cmhyZ2VheGZwY3ZtZW1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA3NzIxMTIsImV4cCI6MjA1NjM0ODExMn0.8bqwiq5uNZqA6aOxFAox4RsJ3SvJ1XyFmSKf2QWkuDQ';
+// Create a single supabase client for interacting with your database
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-// Create client with optimized options
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  },
-  global: {
-    headers: {
-      'Cache-Control': 'max-age=300' // 5 minute cache
-    },
-  },
-  db: {
-    schema: 'public',
-  },
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Function to get page content from the database
-export async function getPageData(slug) {
-  try {
-    const { data, error } = await supabase
-      .from('page_content')
-      .select('*')
-      .eq('slug', slug)
-      .single();
+/**
+ * Optimized function to fetch libraries with caching
+ */
+export async function getLibraries(options = {}) {
+  const cacheKey = `libraries-${JSON.stringify(options)}`;
+  
+  return optimizedFetch(cacheKey, async () => {
+    let query = supabase
+      .from('ui_libraries')
+      .select('*');
+    
+    if (options.framework) {
+      query = query.eq('framework', options.framework);
+    }
+    
+    if (options.tags) {
+      query = query.contains('tags', options.tags);
+    }
+    
+    if (options.sort) {
+      query = query.order(options.sort.field, { ascending: options.sort.ascending });
+    } else {
+      query = query.order('name', { ascending: true });
+    }
+    
+    const { data, error } = await query;
     
     if (error) {
-      console.error('Error fetching page data:', error);
-      return {
-        title: 'About UI Library Directory',
-        content: 'Welcome to the UI Library Directory, your go-to resource for finding the perfect UI component library for your JavaScript projects.'
-      };
+      console.error('Error fetching libraries:', error);
+      throw error;
     }
     
     return data;
-  } catch (error) {
-    console.error('Error in getPageData:', error);
-    return {
-      title: 'About UI Library Directory',
-      content: 'Welcome to the UI Library Directory, your go-to resource for finding the perfect UI component library for your JavaScript projects.'
-    };
-  }
+  }, { ttl: 300000 }); // 5 minute cache
 }
+
+/**
+ * Invalidate cache when data changes
+ */
+export function invalidateLibraryCache() {
+  clearCache('libraries-');
+}
+
+// Export other database functions with similar optimizations

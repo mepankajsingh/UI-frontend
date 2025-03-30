@@ -1,6 +1,8 @@
-// Netlify Function for on-demand revalidation
+/**
+ * Netlify function to handle on-demand revalidation
+ */
 exports.handler = async function(event, context) {
-  // Only allow POST requests
+  // Verify request method
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -8,74 +10,62 @@ exports.handler = async function(event, context) {
     };
   }
   
+  // Verify authentication token
+  const authHeader = event.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : '';
+  const validToken = process.env.PUBLIC_REVALIDATION_TOKEN;
+  
+  if (!token || token !== validToken) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Unauthorized' })
+    };
+  }
+  
   try {
-    // Parse the request body
+    // Parse request body
     const body = JSON.parse(event.body);
-    const { paths } = body;
+    const paths = body.paths || [];
     
-    // Validate token from Authorization header
-    const authHeader = event.headers.authorization || '';
-    const token = authHeader.split(' ')[1];
-    
-    if (!token || token !== process.env.REVALIDATION_TOKEN) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Unauthorized' })
-      };
-    }
-    
-    // Validate paths
-    if (!paths || !Array.isArray(paths) || paths.length === 0) {
+    if (!Array.isArray(paths) || paths.length === 0) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Invalid paths provided' })
+        body: JSON.stringify({ error: 'Invalid or missing paths' })
       };
     }
     
-    // Purge Netlify cache for the specified paths
-    const purgePromises = paths.map(async (path) => {
-      // Normalize path
-      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-      
-      try {
-        // Use Netlify's cache purge API
-        const response = await fetch(`https://api.netlify.com/api/v1/sites/${process.env.SITE_ID}/purge`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.NETLIFY_API_TOKEN}`
-          },
-          body: JSON.stringify({ paths: [normalizedPath] })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Failed to purge cache for ${normalizedPath}:`, errorText);
-          return { path: normalizedPath, success: false, error: errorText };
-        }
-        
-        return { path: normalizedPath, success: true };
-      } catch (error) {
-        console.error(`Error purging cache for ${normalizedPath}:`, error);
-        return { path: normalizedPath, success: false, error: error.message };
-      }
+    // Trigger Netlify build hook to regenerate content
+    const buildHookId = process.env.NETLIFY_BUILD_HOOK_ID;
+    if (!buildHookId) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Build hook not configured' })
+      };
+    }
+    
+    // Call the build hook
+    const response = await fetch(buildHookId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths })
     });
     
-    const results = await Promise.all(purgePromises);
+    if (!response.ok) {
+      throw new Error(`Build hook failed: ${response.status}`);
+    }
     
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Cache invalidation processed',
-        results
+        message: 'Revalidation triggered successfully',
+        paths: paths
       })
     };
   } catch (error) {
-    console.error('Error in revalidate function:', error);
-    
+    console.error('Revalidation error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error', message: error.message })
+      body: JSON.stringify({ error: error.message })
     };
   }
-};
+}

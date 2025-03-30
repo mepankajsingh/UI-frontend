@@ -1,83 +1,50 @@
-/**
- * Optimized Supabase data fetching with connection pooling and retry logic
- */
-import { supabase } from './supabase';
-
-// Connection state tracking
-let isReconnecting = false;
-const RETRY_DELAY = 1000;
-const MAX_RETRIES = 3;
+// Cache implementation for optimized data fetching
+const cache = new Map();
 
 /**
- * Performs a Supabase query with retry logic
- * @param {Function} queryFn - Function that returns a Supabase query
- * @param {number} retries - Number of retries remaining
- * @returns {Promise<Object>} - Query result
+ * Optimized fetch function with caching
+ * @param {string} key - Cache key
+ * @param {Function} fetchFn - Async function to fetch data
+ * @param {Object} options - Cache options
+ * @returns {Promise<any>} - Fetched data
  */
-export async function executeWithRetry(queryFn, retries = MAX_RETRIES) {
-  try {
-    const result = await queryFn();
-    
-    if (result.error) {
-      // Check for connection errors that might need reconnection
-      if (
-        result.error.message?.includes('connection') ||
-        result.error.message?.includes('network') ||
-        result.error.code === 'PGRST301'
-      ) {
-        if (retries > 0 && !isReconnecting) {
-          isReconnecting = true;
-          console.log(`Retrying Supabase query. Attempts remaining: ${retries}`);
-          
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-          
-          isReconnecting = false;
-          return executeWithRetry(queryFn, retries - 1);
-        }
-      }
-      
-      throw result.error;
+export async function optimizedFetch(key, fetchFn, options = { ttl: 60000 }) {
+  const now = Date.now();
+  
+  // Check if we have a valid cached response
+  if (cache.has(key)) {
+    const cachedData = cache.get(key);
+    if (now - cachedData.timestamp < options.ttl) {
+      return cachedData.data;
     }
-    
-    return result;
-  } catch (error) {
-    if (retries > 0 && !isReconnecting) {
-      isReconnecting = true;
-      console.log(`Error in Supabase query. Retrying. Attempts remaining: ${retries}`);
-      
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      
-      isReconnecting = false;
-      return executeWithRetry(queryFn, retries - 1);
-    }
-    
-    throw error;
   }
+  
+  // If no cache or expired, fetch fresh data
+  const data = await fetchFn();
+  
+  // Store in cache
+  cache.set(key, {
+    data,
+    timestamp: now
+  });
+  
+  return data;
 }
 
 /**
- * Optimized version of getPageData with connection handling
- * @param {string} slug - Page slug
- * @returns {Promise<Object>} - Page data
+ * Clear cache entries that match a prefix
+ * @param {string} prefix - Cache key prefix to clear
  */
-export async function getOptimizedPageData(slug) {
-  try {
-    const result = await executeWithRetry(() => 
-      supabase
-        .from('page_content')
-        .select('*')
-        .eq('slug', slug)
-        .single()
-    );
-    
-    return result.data;
-  } catch (error) {
-    console.error('Error fetching optimized page data:', error);
-    return {
-      title: 'About UI Library Directory',
-      content: 'Welcome to the UI Library Directory, your go-to resource for finding the perfect UI component library for your JavaScript projects.'
-    };
+export function clearCache(prefix = '') {
+  if (!prefix) {
+    cache.clear();
+    return;
+  }
+  
+  // Clear only keys that match the prefix
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) {
+      cache.delete(key);
+    }
   }
 }
