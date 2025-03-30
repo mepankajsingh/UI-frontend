@@ -1,5 +1,7 @@
-// Cache implementation for optimized data fetching
-const cache = new Map();
+/**
+ * Simple in-memory cache for optimizing API calls
+ */
+const memoryCache = new Map();
 
 /**
  * Optimized fetch function with caching
@@ -9,42 +11,50 @@ const cache = new Map();
  * @returns {Promise<any>} - Fetched data
  */
 export async function optimizedFetch(key, fetchFn, options = { ttl: 60000 }) {
-  const now = Date.now();
-  
-  // Check if we have a valid cached response
-  if (cache.has(key)) {
-    const cachedData = cache.get(key);
-    if (now - cachedData.timestamp < options.ttl) {
-      return cachedData.data;
+  // Check if we have a valid cached value
+  if (memoryCache.has(key)) {
+    const cachedItem = memoryCache.get(key);
+    if (Date.now() < cachedItem.expiry) {
+      console.log(`Cache hit for ${key}`);
+      return cachedItem.value;
     }
+    console.log(`Cache expired for ${key}`);
   }
-  
-  // If no cache or expired, fetch fresh data
-  const data = await fetchFn();
-  
-  // Store in cache
-  cache.set(key, {
-    data,
-    timestamp: now
-  });
-  
-  return data;
+
+  // Cache miss or expired, fetch fresh data
+  try {
+    const result = await fetchFn();
+    
+    // Store in cache with expiry
+    memoryCache.set(key, {
+      value: result,
+      expiry: Date.now() + options.ttl
+    });
+    
+    return result;
+  } catch (error) {
+    console.error(`Error in optimizedFetch for ${key}:`, error);
+    throw error;
+  }
 }
 
 /**
- * Clear cache entries that match a prefix
- * @param {string} prefix - Cache key prefix to clear
+ * Clear specific cache entries by prefix
+ * @param {string} keyPrefix - Prefix to match cache keys
  */
-export function clearCache(prefix = '') {
-  if (!prefix) {
-    cache.clear();
-    return;
-  }
-  
-  // Clear only keys that match the prefix
-  for (const key of cache.keys()) {
-    if (key.startsWith(prefix)) {
-      cache.delete(key);
+export function clearCache(keyPrefix) {
+  for (const key of memoryCache.keys()) {
+    if (key.startsWith(keyPrefix)) {
+      console.log(`Clearing cache for ${key}`);
+      memoryCache.delete(key);
     }
   }
+}
+
+/**
+ * Clear all cache entries
+ */
+export function clearAllCache() {
+  console.log('Clearing all cache entries');
+  memoryCache.clear();
 }
