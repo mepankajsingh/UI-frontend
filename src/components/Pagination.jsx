@@ -20,6 +20,18 @@ export default function Pagination({ totalItems, itemsPerPage = 20, currentPage 
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // Dispatch custom event for page change
+      const event = new CustomEvent('pageChange', {
+        detail: { page: newPage },
+        bubbles: true
+      });
+      document.dispatchEvent(event);
+      
+      // Update URL with page parameter
+      const url = new URL(window.location);
+      url.searchParams.set('page', newPage);
+      window.history.pushState({}, '', url);
     }
   };
   

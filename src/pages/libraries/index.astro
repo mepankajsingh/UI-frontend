@@ -3,12 +3,17 @@ import Layout from '../../layouts/Layout.astro';
 import LibraryListItem from '../../components/LibraryListItem.astro';
 import SortingControl from '../../components/SortingControl.jsx';
 import FilterComponent from '../../components/FilterComponent.jsx';
+import Pagination from '../../components/Pagination.jsx';
 import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
 
+// Pagination parameters
+const itemsPerPage = 20;
+const page = 1; // Default to first page
+
 // Get all libraries with their frameworks and labels
-const { data: libraries } = await supabase
+const { data: libraries, count: totalLibraries } = await supabase
   .from('libraries')
   .select(`
     *,
@@ -20,8 +25,9 @@ const { data: libraries } = await supabase
     labels:library_labels(
       label_id(id, name, color, text_color)
     )
-  `)
-  .order('name');
+  `, { count: 'exact' })
+  .order('name')
+  .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
 
 // Get all frameworks for the filter
 const { data: frameworks } = await supabase
@@ -47,8 +53,10 @@ const { data: tags } = await supabase
 
     <div class="lg:flex gap-6">
       <!-- Filters sidebar -->
-      <div class="lg:w-64 flex-shrink-0 mb-6 lg:mb-0">
-        <FilterComponent frameworks={frameworks} client:load />
+      <div class="lg:w-64 flex-shrink-0 mb-6 lg:mb-0" id="filters-container">
+        <div class="filters-wrapper">
+          <FilterComponent frameworks={frameworks} client:load />
+        </div>
       </div>
 
       <!-- Main content -->
@@ -70,10 +78,32 @@ const { data: tags } = await supabase
             <p class="text-gray-500">No libraries found.</p>
           </div>
         )}
+
+        <!-- Pagination -->
+        <Pagination 
+          totalItems={totalLibraries || 0} 
+          itemsPerPage={itemsPerPage} 
+          currentPage={page} 
+          client:load 
+        />
       </div>
     </div>
   </main>
 </Layout>
+
+<style>
+  /* Styles for sticky filters */
+  .filters-wrapper {
+    position: relative;
+  }
+  
+  .filters-wrapper.sticky {
+    position: fixed;
+    top: 1rem;
+    width: inherit;
+    max-width: inherit;
+  }
+</style>
 
 <script>
   // Function to initialize filtering and sorting
@@ -197,13 +227,70 @@ const { data: tags } = await supabase
     console.log("Library filtering and sorting initialized!");
   }
   
+  // Function to make filters sticky on scroll
+  function initializeStickyFilters() {
+    const filtersContainer = document.getElementById('filters-container');
+    const filtersWrapper = document.querySelector('.filters-wrapper');
+    
+    if (!filtersContainer || !filtersWrapper) return;
+    
+    // Get initial position of filters
+    const filtersRect = filtersContainer.getBoundingClientRect();
+    const initialTop = filtersRect.top + window.scrollY;
+    const filtersWidth = filtersRect.width;
+    
+    // Function to update sticky state
+    function updateStickyState() {
+      const scrollY = window.scrollY;
+      const navHeight = document.querySelector('nav')?.offsetHeight || 0;
+      const headerOffset = navHeight + 16; // 16px additional padding
+      
+      if (scrollY > initialTop - headerOffset) {
+        filtersWrapper.classList.add('sticky');
+        filtersWrapper.style.width = `${filtersWidth}px`;
+        filtersWrapper.style.top = `${headerOffset}px`;
+      } else {
+        filtersWrapper.classList.remove('sticky');
+        filtersWrapper.style.width = '';
+        filtersWrapper.style.top = '';
+      }
+    }
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', updateStickyState);
+    
+    // Update on window resize
+    window.addEventListener('resize', () => {
+      // Reset width to container width
+      if (filtersWrapper.classList.contains('sticky')) {
+        const newWidth = filtersContainer.offsetWidth;
+        filtersWrapper.style.width = `${newWidth}px`;
+      }
+    });
+    
+    // Initial check
+    updateStickyState();
+    
+    // Clean up on page navigation
+    document.addEventListener('astro:before-swap', () => {
+      window.removeEventListener('scroll', updateStickyState);
+    });
+  }
+  
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', initializeLibraryFiltering);
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeLibraryFiltering();
+    initializeStickyFilters();
+  });
   
   // Re-initialize after Astro page transitions
-  document.addEventListener('astro:page-load', initializeLibraryFiltering);
+  document.addEventListener('astro:page-load', () => {
+    initializeLibraryFiltering();
+    initializeStickyFilters();
+  });
   
   // Also initialize immediately when script runs
   // This ensures it works both on direct page load and after navigation
   initializeLibraryFiltering();
+  initializeStickyFilters();
 </script>

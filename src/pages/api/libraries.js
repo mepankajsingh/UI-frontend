@@ -1,85 +1,106 @@
 import { supabase } from '../../lib/supabase';
 
-export async function get({ request }) {
+export async function GET({ request }) {
   try {
+    // Parse URL and query parameters
     const url = new URL(request.url);
-    const frameworkSlug = url.searchParams.get('frameworkSlug');
-    const start = parseInt(url.searchParams.get('start') || '0');
-    const end = parseInt(url.searchParams.get('end') || '19');
+    const page = parseInt(url.searchParams.get('page') || '1', 10);
+    const itemsPerPage = parseInt(url.searchParams.get('limit') || '20', 10);
+    const sortBy = url.searchParams.get('sort') || 'name';
+    const framework = url.searchParams.get('framework') || '';
+    const theme = url.searchParams.get('theme') || '';
+    const pricing = url.searchParams.get('pricing') || '';
+    const stars = url.searchParams.get('stars') || '';
     
-    if (!frameworkSlug) {
-      return new Response(JSON.stringify({ 
-        error: 'Framework slug is required' 
-      }), { 
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // First get the framework ID from the slug
-    const { data: framework, error: frameworkError } = await supabase
-      .from('frameworks')
-      .select('id')
-      .eq('slug', frameworkSlug)
-      .single();
-    
-    if (frameworkError || !framework) {
-      return new Response(JSON.stringify({ 
-        error: 'Framework not found' 
-      }), { 
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Then get libraries for this framework with pagination
-    const { data: libraryRelations, error: librariesError } = await supabase
-      .from('library_frameworks')
+    // Build query
+    let query = supabase
+      .from('libraries')
       .select(`
-        library_id,
-        is_primary,
-        libraries:library_id(
-          *,
-          frameworks:library_frameworks(
-            is_primary,
-            framework_id(id, name, slug)
-          ),
-          tags:library_tags(tag_id(id, name, slug)),
-          labels:library_labels(
-            label_id(id, name, color, text_color)
-          )
+        *,
+        frameworks:library_frameworks(
+          is_primary,
+          framework_id(id, name, slug)
+        ),
+        tags:library_tags(tag_id(id, name, slug)),
+        labels:library_labels(
+          label_id(id, name, color, text_color)
         )
-      `)
-      .eq('framework_id', framework.id)
-      .range(start, end);
+      `, { count: 'exact' });
     
-    if (librariesError) {
-      return new Response(JSON.stringify({ 
-        error: 'Error fetching libraries' 
-      }), { 
+    // Apply filters
+    if (framework && framework !== 'all') {
+      query = query.contains('frameworks.framework_id.slug', [framework]);
+    }
+    
+    if (theme && theme !== 'all') {
+      query = query.eq('styling', theme);
+    }
+    
+    if (pricing && pricing !== 'all') {
+      query = query.eq('pricing', pricing);
+    }
+    
+    if (stars && stars !== 'all') {
+      let minStars = 0;
+      switch (stars) {
+        case '1000+':
+          minStars = 1000;
+          break;
+        case '5000+':
+          minStars = 5000;
+          break;
+        case '10000+':
+          minStars = 10000;
+          break;
+      }
+      query = query.gte('github_stars', minStars);
+    }
+    
+    // Apply sorting
+    switch (sortBy) {
+      case 'latest':
+        query = query.order('last_update', { ascending: false });
+        break;
+      case 'components':
+        query = query.order('total_components', { ascending: false });
+        break;
+      case 'downloads':
+        query = query.order('npm_downloads', { ascending: false });
+        break;
+      case 'popular':
+        query = query.order('github_stars', { ascending: false });
+        break;
+      default:
+        query = query.order('name');
+    }
+    
+    // Apply pagination
+    const from = (page - 1) * itemsPerPage;
+    const to = page * itemsPerPage - 1;
+    query = query.range(from, to);
+    
+    // Execute query
+    const { data: libraries, count, error } = await query;
+    
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
     
-    // Extract the actual library objects and filter out any nulls
-    const libraries = libraryRelations
-      ? libraryRelations
-          .map(item => item.libraries)
-          .filter(library => library !== null)
-      : [];
-    
     return new Response(JSON.stringify({ 
-      libraries 
-    }), { 
+      libraries, 
+      totalCount: count,
+      page,
+      totalPages: Math.ceil(count / itemsPerPage)
+    }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
+    
   } catch (error) {
-    console.error('API error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Server error' 
-    }), { 
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
