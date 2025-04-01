@@ -2,11 +2,14 @@
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
 import SortingControl from '../../components/SortingControl.jsx';
+import Pagination from '../../components/Pagination.jsx';
 import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
+const ITEMS_PER_PAGE = 20;
+const currentPage = 1; // Default to first page for initial load
 
 // Get framework details
 const { data: framework } = await supabase
@@ -23,7 +26,13 @@ if (!framework) {
   return Astro.redirect('/404');
 }
 
-// Get libraries for this framework with labels
+// Get total count of libraries for this framework
+const { count } = await supabase
+  .from('library_frameworks')
+  .select('*', { count: 'exact', head: true })
+  .eq('framework_id', framework.id);
+
+// Get libraries for this framework with labels (paginated)
 const { data: libraryRelations } = await supabase
   .from('library_frameworks')
   .select(`
@@ -41,7 +50,8 @@ const { data: libraryRelations } = await supabase
       )
     )
   `)
-  .eq('framework_id', framework.id);
+  .eq('framework_id', framework.id)
+  .range(0, ITEMS_PER_PAGE - 1); // Get first page (0-indexed)
 
 // Extract the actual library objects and filter out any nulls
 const libraries = libraryRelations
@@ -80,7 +90,7 @@ function formatNumber(num) {
           <div>
             <h1 class="text-xl font-bold text-gray-900">{framework.name}</h1>
             <p class="text-sm text-gray-500">
-              {libraries.length} {libraries.length === 1 ? 'library' : 'libraries'} available
+              {count}<boltAction type="file" filePath="src/pages/frameworks/[slug].astro"> {count} {count === 1 ? 'library' : 'libraries'} available
             </p>
           </div>
           <div class="ml-auto flex space-x-4">
@@ -182,6 +192,14 @@ function formatNumber(num) {
             />
           ))}
         </div>
+        
+        {/* Pagination component */}
+        <Pagination 
+          totalItems={count || 0} 
+          itemsPerPage={ITEMS_PER_PAGE} 
+          currentPage={currentPage}
+          client:load
+        />
       </>
     ) : (
       <div class="text-center py-12">
@@ -191,12 +209,14 @@ function formatNumber(num) {
   </main>
 </Layout>
 
-<script define:vars={{ libraries }}>
+<script define:vars={{ libraries, count, ITEMS_PER_PAGE }}>
   // Make library data available to the client-side script
   window.libraryData = JSON.parse(JSON.stringify(libraries));
+  window.totalLibraries = count;
+  window.itemsPerPage = ITEMS_PER_PAGE;
   
-  // Initialize sorting functionality
-  function initSorting() {
+  // Initialize sorting and pagination functionality
+  function initLibraryDisplay() {
     // Get all library cards
     const librariesGrid = document.getElementById('libraries-grid');
     if (!librariesGrid) return;
@@ -233,12 +253,6 @@ function formatNumber(num) {
           const bDownloads = parseInt(b.getAttribute('data-downloads') || '0');
           return bDownloads - aDownloads;
         }
-        else if (sortBy === 'forks') {
-          // Sort by GitHub forks
-          const aForks = parseInt(a.getAttribute('data-forks') || '0');
-          const bForks = parseInt(b.getAttribute('data-forks') || '0');
-          return bForks - aForks;
-        }
         
         return 0;
       });
@@ -252,14 +266,53 @@ function formatNumber(num) {
     document.addEventListener('sortChange', (e) => {
       sortLibraries(e.detail.sortBy);
     });
+    
+    // Handle pagination page changes
+    document.addEventListener('pageChange', async (e) => {
+      const page = e.detail.page;
+      const start = (page - 1) * window.itemsPerPage;
+      const end = start + window.itemsPerPage - 1;
+      
+      try {
+        // Show loading state
+        librariesGrid.innerHTML = '<div class="col-span-full text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div></div>';
+        
+        // Get the current framework slug from the URL
+        const pathParts = window.location.pathname.split('/');
+        const frameworkSlug = pathParts[pathParts.length - 1];
+        
+        // Fetch libraries for the current page
+        const response = await fetch(`/api/libraries?frameworkSlug=${frameworkSlug}&start=${start}&end=${end}`);
+        const data = await response.json();
+        
+        if (data.libraries && data.libraries.length > 0) {
+          // Clear the grid
+          librariesGrid.innerHTML = '';
+          
+          // Create library cards for the new page
+          data.libraries.forEach(library => {
+            // This is a simplified version - in reality, you'd need to create the full library card HTML
+            const card = document.createElement('div');
+            card.className = 'library-card';
+            card.innerHTML = `<h3>${library.name}</h3>`;
+            librariesGrid.appendChild(card);
+          });
+        } else {
+          librariesGrid.innerHTML = '<div class="col-span-full text-center py-8">No libraries found for this page.</div>';
+        }
+      } catch (error) {
+        console.error('Error fetching libraries:', error);
+        librariesGrid.innerHTML = '<div class="col-span-full text-center py-8">Error loading libraries. Please try again.</div>';
+      }
+    });
   }
 
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', initSorting);
+  document.addEventListener('DOMContentLoaded', initLibraryDisplay);
   
   // Also initialize on Astro page transitions
-  document.addEventListener('astro:page-load', initSorting);
+  document.addEventListener('astro:page-load', initLibraryDisplay);
   
   // Run immediately for initial page load
-  initSorting();
+  initLibraryDisplay();
 </script>

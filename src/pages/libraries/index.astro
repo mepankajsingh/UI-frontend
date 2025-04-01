@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import LibraryCard from '../../components/LibraryCard.astro';
+import LibraryListItem from '../../components/LibraryListItem.astro';
 import SortingControl from '../../components/SortingControl.jsx';
 import FilterComponent from '../../components/FilterComponent.jsx';
 import { supabase } from '../../lib/supabase';
@@ -51,6 +51,7 @@ const { data: tags } = await supabase
         <FilterComponent frameworks={frameworks} client:load />
       </div>
 
+      <!-- Main content --><boltAction type="file" filePath="src/pages/libraries/index.astro">
       <!-- Main content -->
       <div class="flex-1">
         <!-- Sorting controls -->
@@ -58,10 +59,10 @@ const { data: tags } = await supabase
           <SortingControl client:load />
         </div>
 
-        <!-- Library grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 library-grid">
+        <!-- Library list -->
+        <div class="space-y-4 library-grid">
           {libraries && libraries.map(library => (
-            <LibraryCard library={library} />
+            <LibraryListItem library={library} />
           ))}
         </div>
 
@@ -80,7 +81,7 @@ const { data: tags } = await supabase
   function initializeLibraryFiltering() {
     console.log("Initializing library filtering and sorting...");
     const libraryGrid = document.querySelector('.library-grid');
-    const libraryCards = Array.from(libraryGrid?.children || []);
+    const libraryItems = Array.from(libraryGrid?.children || []);
     
     // Current state
     let currentFilters = {
@@ -93,40 +94,40 @@ const { data: tags } = await supabase
     
     // Apply filters and sorting
     function applyFiltersAndSort() {
-      if (!libraryGrid || !libraryCards.length) return;
+      if (!libraryGrid || !libraryItems.length) return;
       
       // Clone the original array to avoid modifying it
-      let filteredCards = [...libraryCards];
+      let filteredItems = [...libraryItems];
       
       // Apply framework filter
       if (currentFilters.framework && currentFilters.framework !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          // Check if the card has the selected framework
-          const frameworkSlugs = card.dataset.frameworkSlugs || '';
+        filteredItems = filteredItems.filter(item => {
+          // Check if the item has the selected framework
+          const frameworkSlugs = item.dataset.frameworkSlugs || '';
           return frameworkSlugs.includes(currentFilters.framework);
         });
       }
       
       // Apply theme filter
       if (currentFilters.theme && currentFilters.theme !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          // Check if the card has the selected theme style
-          return card.dataset.styling === currentFilters.theme;
+        filteredItems = filteredItems.filter(item => {
+          // Check if the item has the selected theme style
+          return item.dataset.styling === currentFilters.theme;
         });
       }
       
       // Apply pricing filter
       if (currentFilters.pricing && currentFilters.pricing !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          // Check if the card matches the pricing model
-          return card.dataset.pricing === currentFilters.pricing;
+        filteredItems = filteredItems.filter(item => {
+          // Check if the item matches the pricing model
+          return item.dataset.pricing === currentFilters.pricing;
         });
       }
       
       // Apply stars filter
       if (currentFilters.stars && currentFilters.stars !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          const stars = parseInt(card.dataset.stars || '0', 10);
+        filteredItems = filteredItems.filter(item => {
+          const stars = parseInt(item.dataset.stars || '0', 10);
           
           switch (currentFilters.stars) {
             case '1000+':
@@ -142,7 +143,7 @@ const { data: tags } = await supabase
       }
       
       // Apply sorting
-      filteredCards.sort((a, b) => {
+      filteredItems.sort((a, b) => {
         switch (currentSort) {
           case 'latest':
             return new Date(b.dataset.updated || 0) - new Date(a.dataset.updated || 0);
@@ -161,13 +162,13 @@ const { data: tags } = await supabase
       // Clear the grid
       libraryGrid.innerHTML = '';
       
-      // Add filtered and sorted cards back to the grid
-      filteredCards.forEach(card => {
-        libraryGrid.appendChild(card);
+      // Add filtered and sorted items back to the grid
+      filteredItems.forEach(item => {
+        libraryGrid.appendChild(item);
       });
       
       // Show "no results" message if needed
-      if (filteredCards.length === 0) {
+      if (filteredItems.length === 0) {
         const noResults = document.createElement('div');
         noResults.className = 'text-center py-12 col-span-full';
         noResults.innerHTML = '<p class="text-gray-500">No libraries match your filters.</p>';
