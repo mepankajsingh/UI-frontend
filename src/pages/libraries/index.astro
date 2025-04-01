@@ -37,7 +37,7 @@ const { data: tags } = await supabase
 ---
 
 <Layout title="Find UI Libraries for Your Project">
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
     <div class="mb-8">
       <h1 class="text-2xl font-bold text-gray-900 mb-2">UI Libraries</h1>
       <p class="text-gray-600">
@@ -51,7 +51,6 @@ const { data: tags } = await supabase
         <FilterComponent frameworks={frameworks} client:load />
       </div>
 
-      <!-- Main content --><boltAction type="file" filePath="src/pages/libraries/index.astro">
       <!-- Main content -->
       <div class="flex-1">
         <!-- Sorting controls -->

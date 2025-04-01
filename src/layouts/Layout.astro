@@ -26,7 +26,7 @@ const { title } = Astro.props;
   <body class="bg-white min-h-screen flex flex-col text-base">
     <LoadingBar client:load />
     <Navigation />
-    <div id="content" class="flex-grow transition-all duration-300">
+    <div id="content" class="flex-grow transition-all duration-300 max-w-full overflow-hidden">
       <slot />
     </div>
     <Footer />
