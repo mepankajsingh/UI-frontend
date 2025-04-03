@@ -1,5 +1,4 @@
-
-				import createSSRHandler from './.netlify/build/entry.mjs';
+import createSSRHandler from './.netlify/build/entry.mjs';
 				export default createSSRHandler({"cacheOnDemandPages":true});
 				export const config = {
 					includedFiles: ['**/*'],
@@ -9,4 +8,3 @@
 					path: '/*',
 					preferStatic: true,
 				};
-			

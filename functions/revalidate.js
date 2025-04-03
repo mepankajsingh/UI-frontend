@@ -1,71 +1,63 @@
-/**
- * Netlify function to handle on-demand revalidation
- */
-exports.handler = async function(event, context) {
-  // Verify request method
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
-  }
-  
-  // Verify authentication token
-  const authHeader = event.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : '';
-  const validToken = process.env.PUBLIC_REVALIDATION_TOKEN;
-  
-  if (!token || token !== validToken) {
+export async function handler(event) {
+  // Basic auth check - you should implement proper authentication
+  const authHeader = event.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return {
       statusCode: 401,
-      body: JSON.stringify({ error: 'Unauthorized' })
+      body: JSON.stringify({ message: 'Unauthorized' })
     };
   }
-  
+
+  const token = authHeader.split(' ')[1];
+  // Use environment variable for the token
+  if (token !== process.env.REVALIDATION_TOKEN) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ message: 'Invalid token' })
+    };
+  }
+
   try {
-    // Parse request body
-    const body = JSON.parse(event.body);
-    const paths = body.paths || [];
+    // Parse the request body to get the paths to revalidate
+    const { paths } = JSON.parse(event.body);
     
-    if (!Array.isArray(paths) || paths.length === 0) {
+    if (!paths || !Array.isArray(paths)) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Invalid or missing paths' })
+        body: JSON.stringify({ message: 'Invalid request. Expected an array of paths.' })
       };
     }
-    
-    // Trigger Netlify build hook to regenerate content
-    const buildHookId = process.env.NETLIFY_BUILD_HOOK_ID;
-    if (!buildHookId) {
+
+    // Call Netlify's On-demand Builder API to purge the cache for each path
+    const results = await Promise.all(paths.map(async (path) => {
+      const purgeUrl = `https://api.netlify.com/build_hooks/${process.env.NETLIFY_BUILD_HOOK_ID}?trigger_path=${encodeURIComponent(path)}`;
+      
+      const response = await fetch(purgeUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Build hook not configured' })
+        path,
+        status: response.status,
+        ok: response.ok
       };
-    }
-    
-    // Call the build hook
-    const response = await fetch(buildHookId, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paths })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Build hook failed: ${response.status}`);
-    }
-    
+    }));
+
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: 'Revalidation triggered successfully',
-        paths: paths
+        message: 'Revalidation triggered',
+        results
       })
     };
   } catch (error) {
     console.error('Revalidation error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ message: 'Internal server error', error: error.message })
     };
   }
 }
