@@ -1,14 +1,23 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import LibraryCard from '../../components/LibraryCard.astro';
+import LibraryListItem from '../../components/LibraryListItem.astro';
 import SortingControl from '../../components/SortingControl.jsx';
 import FilterComponent from '../../components/FilterComponent.jsx';
+import Pagination from '../../components/Pagination.jsx';
 import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
 
+// Pagination parameters
+const itemsPerPage = 20;
+
+// Get page from URL query parameter or default to 1
+const url = new URL(Astro.request.url);
+const pageParam = url.searchParams.get('page');
+const page = pageParam ? parseInt(pageParam) : 1;
+
 // Get all libraries with their frameworks and labels
-const { data: libraries } = await supabase
+const { data: libraries, count: totalLibraries } = await supabase
   .from('libraries')
   .select(`
     *,
@@ -20,8 +29,9 @@ const { data: libraries } = await supabase
     labels:library_labels(
       label_id(id, name, color, text_color)
     )
-  `)
-  .order('name');
+  `, { count: 'exact' })
+  .order('name')
+  .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
 
 // Get all frameworks for the filter
 const { data: frameworks } = await supabase
@@ -47,8 +57,13 @@ const { data: tags } = await supabase
 
     <div class="lg:flex gap-6">
       <!-- Filters sidebar -->
-      <div class="lg:w-64 flex-shrink-0 mb-6 lg:mb-0">
-        <FilterComponent frameworks={frameworks} client:load />
+      <div class="lg:w-56 flex-shrink-0 mb-6 lg:mb-0" id="filters-container">
+        <div class="filters-wrapper">
+          <div class="bg-white border border-gray-200 rounded-lg p-3 mb-4">
+            <h2 class="text-xs font-medium text-gray-900 mb-2">Filters</h2>
+            <FilterComponent frameworks={frameworks} tags={tags} client:load />
+          </div>
+        </div>
       </div>
 
       <!-- Main content -->
@@ -58,10 +73,17 @@ const { data: tags } = await supabase
           <SortingControl client:load />
         </div>
 
-        <!-- Library grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4 library-grid">
+        <!-- Library list -->
+        <div class="space-y-4 library-grid" id="libraries-grid">
           {libraries && libraries.map(library => (
-            <LibraryCard library={library} />
+            <LibraryListItem 
+              library={library} 
+              data-stars={library.github_stars || 0}
+              data-updated={library.last_update || ''}
+              data-components={library.total_components || 0}
+              data-downloads={library.npm_downloads || 0}
+              data-forks={library.github_forks || 0}
+            />
           ))}
         </div>
 
@@ -70,17 +92,211 @@ const { data: tags } = await supabase
             <p class="text-gray-500">No libraries found.</p>
           </div>
         )}
+
+        <!-- Pagination -->
+        <div id="pagination-container">
+          <Pagination 
+            totalItems={totalLibraries || 0} 
+            itemsPerPage={itemsPerPage} 
+            currentPage={page} 
+            client:load 
+          />
+        </div>
       </div>
     </div>
   </main>
 </Layout>
 
-<script>
+<style>
+  /* Styles for sticky filters */
+  .filters-wrapper {
+    position: relative;
+  }
+  
+  .filters-wrapper.sticky {
+    position: fixed;
+    top: 1rem;
+    width: inherit;
+    max-width: inherit;
+  }
+</style>
+
+<script define:vars={{ libraries, totalLibraries, itemsPerPage, page }}>
+  // Make library data available to the client-side script
+  window.libraryData = JSON.parse(JSON.stringify(libraries || []));
+  window.totalLibraries = totalLibraries || 0;
+  window.itemsPerPage = itemsPerPage;
+  window.currentPage = page;
+  
+  // Function to create a library list item element from library data
+  function createLibraryListItem(library) {
+    // Create the main container
+    const item = document.createElement('div');
+    item.className = 'bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 relative';
+    item.dataset.stars = library.github_stars || 0;
+    item.dataset.updated = library.last_update || '';
+    item.dataset.components = library.total_components || 0;
+    item.dataset.downloads = library.npm_downloads || 0;
+    
+    // Format numbers for display
+    function formatNumber(num) {
+      if (!num) return '0';
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+      }
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
+      }
+      return num.toString();
+    }
+    
+    // Get primary framework
+    const primaryFramework = library.frameworks?.find(fw => fw.is_primary)?.framework_id;
+    const frameworkSlugs = library.frameworks?.map(fw => fw.framework_id.slug).join(',') || '';
+    item.dataset.frameworkSlugs = frameworkSlugs;
+    
+    // Get all framework names
+    const frameworkNames = library.frameworks?.map(fw => fw.framework_id.name).join(', ') || '';
+    
+    // Check for manual labels
+    const hasManualLabels = library.labels && library.labels.length > 0;
+    const firstLabel = hasManualLabels ? library.labels[0].label_id : null;
+    
+    // Create the item content
+    const content = document.createElement('div');
+    content.className = 'p-4 flex items-center';
+    
+    // Library logo
+    const logoContainer = document.createElement('div');
+    logoContainer.className = 'w-10 h-10 flex-shrink-0 mr-4';
+    const logo = document.createElement('img');
+    logo.src = library.icon_url || library.logo_url || '/favicon.svg';
+    logo.alt = `${library.name} logo`;
+    logo.className = 'w-full h-full object-contain';
+    logo.onerror = function() { this.src = '/favicon.svg'; };
+    logoContainer.appendChild(logo);
+    content.appendChild(logoContainer);
+    
+    // Library info
+    const infoContainer = document.createElement('div');
+    infoContainer.className = 'flex-1 min-w-0';
+    
+    // Library name and link
+    const nameLink = document.createElement('a');
+    nameLink.href = `/libraries/${library.slug}`;
+    nameLink.className = 'text-sm font-medium text-gray-900 hover:text-indigo-600';
+    nameLink.textContent = library.name;
+    
+    // Library description
+    const description = document.createElement('p');
+    description.className = 'text-xs text-gray-500 mt-1 truncate';
+    description.textContent = library.description || '';
+    
+    // Framework info
+    const frameworkInfo = document.createElement('div');
+    frameworkInfo.className = 'text-xs text-gray-400 mt-1';
+    frameworkInfo.textContent = frameworkNames;
+    
+    // Add elements to info container
+    infoContainer.appendChild(nameLink);
+    infoContainer.appendChild(description);
+    infoContainer.appendChild(frameworkInfo);
+    content.appendChild(infoContainer);
+    
+    // Stats container
+    const statsContainer = document.createElement('div');
+    statsContainer.className = 'flex items-center space-x-4 ml-4';
+    
+    // Stars stat
+    if (library.github_stars) {
+      const starsStat = document.createElement('div');
+      starsStat.className = 'flex items-center text-xs text-gray-500';
+      starsStat.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 .587l3.668 7.568 8.332 1.151-6.064 5.828 1.48 8.279-7.416-3.967-7.417 3.967 1.481-8.279-6.064-5.828 8.332-1.151z"/>
+        </svg>
+        <span>${formatNumber(library.github_stars)}</span>
+      `;
+      statsContainer.appendChild(starsStat);
+    }
+    
+    // Downloads stat
+    if (library.npm_downloads) {
+      const downloadsStat = document.createElement('div');
+      downloadsStat.className = 'flex items-center text-xs text-gray-500';
+      downloadsStat.innerHTML = `
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        <span>${formatNumber(library.npm_downloads)}</span>
+      `;
+      statsContainer.appendChild(downloadsStat);
+    }
+    
+    // Components stat
+    if (library.total_components) {
+      const componentsStat = document.createElement('div');
+      componentsStat.className = 'flex items-center text-xs text-gray-500';
+      componentsStat.innerHTML = `
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+        </svg>
+        <span>${formatNumber(library.total_components)}</span>
+      `;
+      statsContainer.appendChild(componentsStat);
+    }
+    
+    content.appendChild(statsContainer);
+    item.appendChild(content);
+    
+    // Create trending label if needed
+    if (library.is_trending && !hasManualLabels) {
+      const trendingLabel = document.createElement('div');
+      trendingLabel.className = 'absolute top-0 right-0 mt-1 mr-1';
+      trendingLabel.innerHTML = `
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium bg-rose-500 text-white">
+          Trending
+        </span>
+      `;
+      item.appendChild(trendingLabel);
+    }
+    
+    // Create manual label if available
+    if (hasManualLabels && firstLabel) {
+      const manualLabel = document.createElement('div');
+      manualLabel.className = 'absolute top-0 right-0 mt-1 mr-1';
+      manualLabel.innerHTML = `
+        <span 
+          class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium"
+          style="background-color: ${firstLabel.color}; color: ${firstLabel.text_color || 'white'};"
+        >
+          ${firstLabel.name}
+        </span>
+      `;
+      item.appendChild(manualLabel);
+    }
+    
+    // Add text-2xs class style if not already added
+    if (!document.getElementById('text-2xs-style')) {
+      const style = document.createElement('style');
+      style.id = 'text-2xs-style';
+      style.textContent = `
+        .text-2xs {
+          font-size: 0.65rem;
+          line-height: 0.85rem;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    return item;
+  }
+  
   // Function to initialize filtering and sorting
   function initializeLibraryFiltering() {
     console.log("Initializing library filtering and sorting...");
     const libraryGrid = document.querySelector('.library-grid');
-    const libraryCards = Array.from(libraryGrid?.children || []);
+    const libraryItems = Array.from(libraryGrid?.children || []);
     
     // Current state
     let currentFilters = {
@@ -93,40 +309,44 @@ const { data: tags } = await supabase
     
     // Apply filters and sorting
     function applyFiltersAndSort() {
-      if (!libraryGrid || !libraryCards.length) return;
+      if (!libraryGrid || !libraryItems.length) return;
       
       // Clone the original array to avoid modifying it
-      let filteredCards = [...libraryCards];
+      let filteredItems = [...libraryItems];
       
       // Apply framework filter
       if (currentFilters.framework && currentFilters.framework !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          // Check if the card has the selected framework
-          const frameworkSlugs = card.dataset.frameworkSlugs || '';
-          return frameworkSlugs.includes(currentFilters.framework);
+        filteredItems = filteredItems.filter(item => {
+          // Check if the item has the selected framework
+          const frameworkSlugs = item.dataset.frameworkSlugs || '';
+          return frameworkSlu<think>
+I need to continue the code from where I left off. I was in the middle of the `applyFiltersAndSort` function in the `initializeLibraryFiltering` function. I'll continue from there and complete the file.
+</think>
+
+gs.includes(currentFilters.framework);
         });
       }
       
       // Apply theme filter
       if (currentFilters.theme && currentFilters.theme !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          // Check if the card has the selected theme style
-          return card.dataset.styling === currentFilters.theme;
+        filteredItems = filteredItems.filter(item => {
+          // Check if the item has the selected theme style
+          return item.dataset.styling === currentFilters.theme;
         });
       }
       
       // Apply pricing filter
       if (currentFilters.pricing && currentFilters.pricing !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          // Check if the card matches the pricing model
-          return card.dataset.pricing === currentFilters.pricing;
+        filteredItems = filteredItems.filter(item => {
+          // Check if the item matches the pricing model
+          return item.dataset.pricing === currentFilters.pricing;
         });
       }
       
       // Apply stars filter
       if (currentFilters.stars && currentFilters.stars !== 'all') {
-        filteredCards = filteredCards.filter(card => {
-          const stars = parseInt(card.dataset.stars || '0', 10);
+        filteredItems = filteredItems.filter(item => {
+          const stars = parseInt(item.dataset.stars || '0', 10);
           
           switch (currentFilters.stars) {
             case '1000+':
@@ -142,7 +362,7 @@ const { data: tags } = await supabase
       }
       
       // Apply sorting
-      filteredCards.sort((a, b) => {
+      filteredItems.sort((a, b) => {
         switch (currentSort) {
           case 'latest':
             return new Date(b.dataset.updated || 0) - new Date(a.dataset.updated || 0);
@@ -150,8 +370,6 @@ const { data: tags } = await supabase
             return (parseInt(b.dataset.components || '0', 10) - parseInt(a.dataset.components || '0', 10));
           case 'downloads':
             return (parseInt(b.dataset.downloads || '0', 10) - parseInt(a.dataset.downloads || '0', 10));
-          case 'forks':
-            return (parseInt(b.dataset.forks || '0', 10) - parseInt(a.dataset.forks || '0', 10));
           case 'popular':
           default:
             return (parseInt(b.dataset.stars || '0', 10) - parseInt(a.dataset.stars || '0', 10));
@@ -161,13 +379,13 @@ const { data: tags } = await supabase
       // Clear the grid
       libraryGrid.innerHTML = '';
       
-      // Add filtered and sorted cards back to the grid
-      filteredCards.forEach(card => {
-        libraryGrid.appendChild(card);
+      // Add filtered and sorted items back to the grid
+      filteredItems.forEach(item => {
+        libraryGrid.appendChild(item);
       });
       
       // Show "no results" message if needed
-      if (filteredCards.length === 0) {
+      if (filteredItems.length === 0) {
         const noResults = document.createElement('div');
         noResults.className = 'text-center py-12 col-span-full';
         noResults.innerHTML = '<p class="text-gray-500">No libraries match your filters.</p>';
@@ -178,6 +396,7 @@ const { data: tags } = await supabase
     // Remove any existing event listeners to prevent duplicates
     document.removeEventListener('filterChange', handleFilterChange);
     document.removeEventListener('sortChange', handleSortChange);
+    document.removeEventListener('pageChange', handlePageChange);
     
     // Define event handlers
     function handleFilterChange(event) {
@@ -190,20 +409,130 @@ const { data: tags } = await supabase
       applyFiltersAndSort();
     }
     
+    // Handle pagination page changes
+    async function handlePageChange(e) {
+      const page = e.detail.page;
+      const start = (page - 1) * window.itemsPerPage;
+      const end = start + window.itemsPerPage - 1;
+      
+      try {
+        // Show loading state
+        libraryGrid.innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div></div>';
+        
+        // Fetch libraries for the current page
+        const response = await fetch(`/api/libraries?start=${start}&end=${end}&sortBy=${currentSort}`);
+        
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.libraries && data.libraries.length > 0) {
+          // Clear the grid
+          libraryGrid.innerHTML = '';
+          
+          // Create library list items for the new page
+          data.libraries.forEach(library => {
+            const item = createLibraryListItem(library);
+            libraryGrid.appendChild(item);
+          });
+          
+          // Update pagination component with new total if provided
+          if (data.total !== undefined) {
+            window.totalLibraries = data.total;
+            
+            // Create a new custom event to update the pagination
+            const updateEvent = new CustomEvent('updatePagination', {
+              detail: {
+                totalItems: data.total,
+                currentPage: page
+              },
+              bubbles: true
+            });
+            document.dispatchEvent(updateEvent);
+          }
+        } else {
+          libraryGrid.innerHTML = '<div class="text-center py-8">No libraries found for this page.</div>';
+        }
+      } catch (error) {
+        console.error('Error fetching libraries:', error);
+        libraryGrid.innerHTML = '<div class="text-center py-8">Error loading libraries. Please try again.</div>';
+      }
+    }
+    
     // Add event listeners
     document.addEventListener('filterChange', handleFilterChange);
     document.addEventListener('sortChange', handleSortChange);
+    document.addEventListener('pageChange', handlePageChange);
     
     console.log("Library filtering and sorting initialized!");
   }
   
+  // Function to make filters sticky on scroll
+  function initializeStickyFilters() {
+    const filtersContainer = document.getElementById('filters-container');
+    const filtersWrapper = document.querySelector('.filters-wrapper');
+    
+    if (!filtersContainer || !filtersWrapper) return;
+    
+    // Get initial position of filters
+    const filtersRect = filtersContainer.getBoundingClientRect();
+    const initialTop = filtersRect.top + window.scrollY;
+    const filtersWidth = filtersRect.width;
+    
+    // Function to update sticky state
+    function updateStickyState() {
+      const scrollY = window.scrollY;
+      const navHeight = document.querySelector('nav')?.offsetHeight || 0;
+      const headerOffset = navHeight + 16; // 16px additional padding
+      
+      if (scrollY > initialTop - headerOffset) {
+        filtersWrapper.classList.add('sticky');
+        filtersWrapper.style.width = `${filtersWidth}px`;
+        filtersWrapper.style.top = `${headerOffset}px`;
+      } else {
+        filtersWrapper.classList.remove('sticky');
+        filtersWrapper.style.width = '';
+        filtersWrapper.style.top = '';
+      }
+    }
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', updateStickyState);
+    
+    // Update on window resize
+    window.addEventListener('resize', () => {
+      // Reset width to container width
+      if (filtersWrapper.classList.contains('sticky')) {
+        const newWidth = filtersContainer.offsetWidth;
+        filtersWrapper.style.width = `${newWidth}px`;
+      }
+    });
+    
+    // Initial check
+    updateStickyState();
+    
+    // Clean up on page navigation
+    document.addEventListener('astro:before-swap', () => {
+      window.removeEventListener('scroll', updateStickyState);
+    });
+  }
+  
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', initializeLibraryFiltering);
+  document.addEventListener('DOMContentLoaded', () => {
+    initializeLibraryFiltering();
+    initializeStickyFilters();
+  });
   
   // Re-initialize after Astro page transitions
-  document.addEventListener('astro:page-load', initializeLibraryFiltering);
+  document.addEventListener('astro:page-load', () => {
+    initializeLibraryFiltering();
+    initializeStickyFilters();
+  });
   
   // Also initialize immediately when script runs
   // This ensures it works both on direct page load and after navigation
   initializeLibraryFiltering();
+  initializeStickyFilters();
 </script>

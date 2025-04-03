@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import * as Select from '@radix-ui/react-select';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 
-export default function FilterComponent({ frameworks = [], onFilterChange }) {
+export default function FilterComponent({ frameworks = [], tags = [] }) {
   const [filters, setFilters] = useState({
     framework: '',
     theme: '',
@@ -12,41 +12,29 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
   
   // Reset state when component is mounted to ensure consistent state after navigation
   useEffect(() => {
-    // Try to load saved filters from localStorage
-    try {
-      const savedFilters = localStorage.getItem('libraryFilters');
-      if (savedFilters) {
+    // If there were previously selected filters in localStorage, use those
+    const savedFilters = localStorage.getItem('libraryFilters');
+    if (savedFilters) {
+      try {
         const parsedFilters = JSON.parse(savedFilters);
         setFilters(parsedFilters);
-        
         // Also dispatch the event to apply the filters immediately
         dispatchFilterEvent(parsedFilters);
+      } catch (e) {
+        console.error('Error parsing saved filters:', e);
       }
-    } catch (error) {
-      console.error('Error loading saved filters:', error);
-      // Reset to default if there's an error
-      setFilters({
-        framework: '',
-        theme: '',
-        pricing: '',
-        stars: ''
-      });
     }
   }, []);
   
-  const dispatchFilterEvent = (filterValues) => {
+  const dispatchFilterEvent = (newFilters) => {
     const event = new CustomEvent('filterChange', {
-      detail: { filters: filterValues }
+      detail: { filters: newFilters }
     });
     document.dispatchEvent(event);
   };
   
   const handleFilterChange = (filterType, value) => {
-    const newFilters = {
-      ...filters,
-      [filterType]: value
-    };
-    
+    const newFilters = { ...filters, [filterType]: value };
     setFilters(newFilters);
     
     // Save to localStorage for persistence
@@ -56,256 +44,316 @@ export default function FilterComponent({ frameworks = [], onFilterChange }) {
     dispatchFilterEvent(newFilters);
   };
   
-  const themeOptions = [
-    { id: 'all', label: 'All Themes' },
-    { id: 'styled', label: 'Styled' },
-    { id: 'unstyled', label: 'Unstyled' }
-  ];
-  
-  const pricingOptions = [
-    { id: 'all', label: 'All Pricing' },
-    { id: 'free', label: 'Free' },
-    { id: 'freemium', label: 'Freemium' }
-  ];
-  
-  const starsOptions = [
-    { id: 'all', label: 'All Stars' },
-    { id: '1000+', label: '1000+' },
-    { id: '5000+', label: '5000+' },
-    { id: '10000+', label: '10,000+' }
-  ];
+  // Wrap the Select component in a client-only renderer
+  const SelectWrapper = ({ children, ...props }) => {
+    const [isMounted, setIsMounted] = useState(false);
+    
+    useEffect(() => {
+      setIsMounted(true);
+    }, []);
+    
+    if (!isMounted) {
+      // Return a placeholder while not mounted
+      return (
+        <div className="relative w-full border border-gray-300 rounded-md py-1 px-2 text-xs">
+          Loading...
+        </div>
+      );
+    }
+    
+    return <Select.Root {...props}>{children}</Select.Root>;
+  };
   
   return (
-    <div className="mb-6">
-      <h3 className="text-sm font-medium text-gray-700 mb-2">Filters</h3>
-      
-      <div className="space-y-4">
-        {/* Framework filter - Radix Select */}
-        <div>
-          <label htmlFor="framework-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
-            Framework
-          </label>
-          <Select.Root 
-            value={filters.framework} 
-            onValueChange={(value) => handleFilterChange('framework', value)}
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-xs font-medium text-gray-700 mb-1">Framework</h3>
+        <SelectWrapper
+          value={filters.framework}
+          onValueChange={(value) => handleFilterChange('framework', value)}
+        >
+          <Select.Trigger
+            className="inline-flex items-center justify-between w-full border border-gray-300 rounded-md py-1 px-2 text-xs bg-white hover:bg-gray-50"
+            aria-label="Framework"
           >
-            <Select.Trigger 
-              id="framework-filter"
-              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              aria-label="Framework"
+            <Select.Value placeholder="All frameworks" />
+            <Select.Icon>
+              <ChevronDownIcon className="h-3 w-3" />
+            </Select.Icon>
+          </Select.Trigger>
+          
+          <Select.Portal>
+            <Select.Content
+              className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+              position="popper"
+              sideOffset={5}
             >
-              <Select.Value placeholder="All Frameworks" />
-              <Select.Icon>
-                <ChevronDownIcon />
-              </Select.Icon>
-            </Select.Trigger>
-            
-            <Select.Portal>
-              <Select.Content 
-                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
-                position="popper"
-                sideOffset={5}
-              >
-                <Select.ScrollUpButton className="flex items-center justify-center h-6 bg-white text-gray-700 cursor-default">
-                  <ChevronUpIcon />
-                </Select.ScrollUpButton>
+              <Select.ScrollUpButton className="flex items-center justify-center h-5 bg-white text-gray-700 cursor-default">
+                <ChevronUpIcon />
+              </Select.ScrollUpButton>
+              
+              <Select.Viewport className="p-1">
+                <Select.Item
+                  value="all"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>All frameworks</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
                 
-                <Select.Viewport className="p-1">
-                  <Select.Item 
-                    value="all" 
-                    className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
+                {frameworks && frameworks.map((framework) => (
+                  <Select.Item
+                    key={framework.slug}
+                    value={framework.slug}
+                    className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
                   >
-                    <Select.ItemText>All Frameworks</Select.ItemText>
+                    <Select.ItemText>{framework.name}</Select.ItemText>
                     <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
-                      <CheckIcon />
+                      <CheckIcon className="h-3 w-3" />
                     </Select.ItemIndicator>
                   </Select.Item>
-                  
-                  {frameworks.map((framework) => (
-                    <Select.Item 
-                      key={framework.id} 
-                      value={framework.slug}
-                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
-                    >
-                      <Select.ItemText>{framework.name}</Select.ItemText>
-                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
-                        <CheckIcon />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                  ))}
-                </Select.Viewport>
-                
-                <Select.ScrollDownButton className="flex items-center justify-center h-6 bg-white text-gray-700 cursor-default">
-                  <ChevronDownIcon />
-                </Select.ScrollDownButton>
-              </Select.Content>
-            </Select.Portal>
-          </Select.Root>
-        </div>
-        
-        {/* Theme filter - Radix Select */}
-        <div>
-          <label htmlFor="theme-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
-            Theme
-          </label>
-          <Select.Root 
-            value={filters.theme} 
-            onValueChange={(value) => handleFilterChange('theme', value)}
-          >
-            <Select.Trigger 
-              id="theme-filter"
-              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              aria-label="Theme"
-            >
-              <Select.Value placeholder="All Themes" />
-              <Select.Icon>
+                ))}
+              </Select.Viewport>
+              
+              <Select.ScrollDownButton className="flex items-center justify-center h-5 bg-white text-gray-700 cursor-default">
                 <ChevronDownIcon />
-              </Select.Icon>
-            </Select.Trigger>
-            
-            <Select.Portal>
-              <Select.Content 
-                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
-                position="popper"
-                sideOffset={5}
-              >
-                <Select.Viewport className="p-1">
-                  {themeOptions.map((option) => (
-                    <Select.Item 
-                      key={option.id} 
-                      value={option.id}
-                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
-                    >
-                      <Select.ItemText>{option.label}</Select.ItemText>
-                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
-                        <CheckIcon />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                  ))}
-                </Select.Viewport>
-              </Select.Content>
-            </Select.Portal>
-          </Select.Root>
-        </div>
-        
-        {/* Pricing filter - Radix Select */}
-        <div>
-          <label htmlFor="pricing-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
-            Pricing
-          </label>
-          <Select.Root 
-            value={filters.pricing} 
-            onValueChange={(value) => handleFilterChange('pricing', value)}
-          >
-            <Select.Trigger 
-              id="pricing-filter"
-              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              aria-label="Pricing"
-            >
-              <Select.Value placeholder="All Pricing" />
-              <Select.Icon>
-                <ChevronDownIcon />
-              </Select.Icon>
-            </Select.Trigger>
-            
-            <Select.Portal>
-              <Select.Content 
-                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
-                position="popper"
-                sideOffset={5}
-              >
-                <Select.Viewport className="p-1">
-                  {pricingOptions.map((option) => (
-                    <Select.Item 
-                      key={option.id} 
-                      value={option.id}
-                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
-                    >
-                      <Select.ItemText>{option.label}</Select.ItemText>
-                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
-                        <CheckIcon />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                  ))}
-                </Select.Viewport>
-              </Select.Content>
-            </Select.Portal>
-          </Select.Root>
-        </div>
-        
-        {/* GitHub Stars filter - Radix Select */}
-        <div>
-          <label htmlFor="stars-filter" className="block text-xs font-medium text-gray-500 mb-1.5">
-            GitHub Stars
-          </label>
-          <Select.Root 
-            value={filters.stars} 
-            onValueChange={(value) => handleFilterChange('stars', value)}
-          >
-            <Select.Trigger 
-              id="stars-filter"
-              className="flex items-center justify-between w-full rounded-md border border-gray-300 bg-white py-1.5 px-3 text-xs shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              aria-label="GitHub Stars"
-            >
-              <Select.Value placeholder="All Stars" />
-              <Select.Icon>
-                <ChevronDownIcon />
-              </Select.Icon>
-            </Select.Trigger>
-            
-            <Select.Portal>
-              <Select.Content 
-                className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
-                position="popper"
-                sideOffset={5}
-              >
-                <Select.Viewport className="p-1">
-                  {starsOptions.map((option) => (
-                    <Select.Item 
-                      key={option.id} 
-                      value={option.id}
-                      className="text-xs relative flex items-center px-6 py-2 rounded-md hover:bg-indigo-100 hover:text-indigo-900 cursor-default select-none outline-none data-[highlighted]:bg-indigo-100 data-[highlighted]:text-indigo-900"
-                    >
-                      <Select.ItemText>{option.label}</Select.ItemText>
-                      <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
-                        <CheckIcon />
-                      </Select.ItemIndicator>
-                    </Select.Item>
-                  ))}
-                </Select.Viewport>
-              </Select.Content>
-            </Select.Portal>
-          </Select.Root>
-        </div>
+              </Select.ScrollDownButton>
+            </Select.Content>
+          </Select.Portal>
+        </SelectWrapper>
       </div>
       
-      {/* Clear filters button - only show if at least one filter is active */}
-      {Object.values(filters).some(value => value !== '') && (
-        <button
-          onClick={() => {
-            const emptyFilters = {
-              framework: '',
-              theme: '',
-              pricing: '',
-              stars: ''
-            };
-            
-            setFilters(emptyFilters);
-            
-            // Clear localStorage
-            localStorage.removeItem('libraryFilters');
-            
-            // Dispatch event for clearing filters
-            dispatchFilterEvent(emptyFilters);
-          }}
-          className="mt-4 text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
+      <div>
+        <h3 className="text-xs font-medium text-gray-700 mb-1">Theme Style</h3>
+        <SelectWrapper
+          value={filters.theme}
+          onValueChange={(value) => handleFilterChange('theme', value)}
         >
-          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-          Clear filters
-        </button>
-      )}
+          <Select.Trigger
+            className="inline-flex items-center justify-between w-full border border-gray-300 rounded-md py-1 px-2 text-xs bg-white hover:bg-gray-50"
+            aria-label="Theme Style"
+          >
+            <Select.Value placeholder="All styles" />
+            <Select.Icon>
+              <ChevronDownIcon className="h-3 w-3" />
+            </Select.Icon>
+          </Select.Trigger>
+          
+          <Select.Portal>
+            <Select.Content
+              className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+              position="popper"
+              sideOffset={5}
+            >
+              <Select.ScrollUpButton className="flex items-center justify-center h-5 bg-white text-gray-700 cursor-default">
+                <ChevronUpIcon />
+              </Select.ScrollUpButton>
+              
+              <Select.Viewport className="p-1">
+                <Select.Item
+                  value="all"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>All styles</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="tailwind"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>Tailwind CSS</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="css"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>CSS / SCSS</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="styled"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>Styled Components</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+              </Select.Viewport>
+              
+              <Select.ScrollDownButton className="flex items-center justify-center h-5 bg-white text-gray-700 cursor-default">
+                <ChevronDownIcon />
+              </Select.ScrollDownButton>
+            </Select.Content>
+          </Select.Portal>
+        </SelectWrapper>
+      </div>
+      
+      <div>
+        <h3 className="text-xs font-medium text-gray-700 mb-1">Pricing</h3>
+        <SelectWrapper
+          value={filters.pricing}
+          onValueChange={(value) => handleFilterChange('pricing', value)}
+        >
+          <Select.Trigger
+            className="inline-flex items-center justify-between w-full border border-gray-300 rounded-md py-1 px-2 text-xs bg-white hover:bg-gray-50"
+            aria-label="Pricing"
+          >
+            <Select.Value placeholder="All pricing" />
+            <Select.Icon>
+              <ChevronDownIcon className="h-3 w-3" />
+            </Select.Icon>
+          </Select.Trigger>
+          
+          <Select.Portal>
+            <Select.Content
+              className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+              position="popper"
+              sideOffset={5}
+            >
+              <Select.Viewport className="p-1">
+                <Select.Item
+                  value="all"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>All pricing</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="free"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>Free</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="paid"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>Paid</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="freemium"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>Freemium</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </SelectWrapper>
+      </div>
+      
+      <div>
+        <h3 className="text-xs font-medium text-gray-700 mb-1">GitHub Stars</h3>
+        <SelectWrapper
+          value={filters.stars}
+          onValueChange={(value) => handleFilterChange('stars', value)}
+        >
+          <Select.Trigger
+            className="inline-flex items-center justify-between w-full border border-gray-300 rounded-md py-1 px-2 text-xs bg-white hover:bg-gray-50"
+            aria-label="GitHub Stars"
+          >
+            <Select.Value placeholder="Any stars" />
+            <Select.Icon>
+              <ChevronDownIcon className="h-3 w-3" />
+            </Select.Icon>
+          </Select.Trigger>
+          
+          <Select.Portal>
+            <Select.Content
+              className="overflow-hidden bg-white rounded-md shadow-lg border border-gray-200 z-50"
+              position="popper"
+              sideOffset={5}
+            >
+              <Select.Viewport className="p-1">
+                <Select.Item
+                  value="all"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>Any stars</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="1000+"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>1,000+ stars</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="5000+"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>5,000+ stars</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+                
+                <Select.Item
+                  value="10000+"
+                  className="relative flex items-center px-6 py-1 text-xs rounded-md hover:bg-gray-100 cursor-pointer outline-none data-[highlighted]:bg-gray-100"
+                >
+                  <Select.ItemText>10,000+ stars</Select.ItemText>
+                  <Select.ItemIndicator className="absolute left-1 inline-flex items-center">
+                    <CheckIcon className="h-3 w-3" />
+                  </Select.ItemIndicator>
+                </Select.Item>
+              </Select.Viewport>
+            </Select.Content>
+          </Select.Portal>
+        </SelectWrapper>
+      </div>
+      
+      {/* Reset filters button */}
+      <button
+        onClick={() => {
+          const resetFilters = {
+            framework: '',
+            theme: '',
+            pricing: '',
+            stars: ''
+          };
+          setFilters(resetFilters);
+          localStorage.removeItem('libraryFilters');
+          dispatchFilterEvent(resetFilters);
+        }}
+        className="w-full mt-2 py-1 px-2 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+      >
+        Reset Filters
+      </button>
     </div>
   );
 }

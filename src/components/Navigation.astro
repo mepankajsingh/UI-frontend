@@ -1,68 +1,71 @@
 ---
 ---
 
-<nav id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white shadow-md flex flex-col z-10">
-  <div class="p-4 border-b border-gray-800 flex items-center">
-    <a href="/" class="text-lg font-bold text-white">
-      <span class="text-indigo-400"><</span><span class="text-indigo-400">/></span>
-      <span class="ml-2">UIriver</span>
-    </a>
+<nav id="top-nav" class="fixed top-0 left-0 right-0 bg-white text-gray-800 shadow-sm z-10 border-b border-gray-200">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <!-- Logo and brand -->
+      <div class="flex items-center">
+        <a href="/" class="text-lg font-bold text-gray-900 flex items-center">
+          <span class="text-indigo-600"><</span><span class="text-indigo-600">/></span>
+          <span class="ml-2">UIriver</span>
+        </a>
+      </div>
+      
+      <!-- Main navigation -->
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="/frameworks" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          Frameworks
+        </a>
+        <a href="/libraries" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+          </svg>
+          Libraries
+        </a>
+        <a href="/search" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Search
+        </a>
+      </div>
+      
+      <!-- Mobile menu button -->
+      <div class="md:hidden flex items-center">
+        <button id="mobile-menu-button" class="text-gray-600 hover:text-indigo-600 focus:outline-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="flex flex-col flex-grow p-4 space-y-2 overflow-y-auto">
-    <a href="/frameworks" class="text-gray-300 hover:text-white hover:bg-gray-800 p-2 rounded-md flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-      </svg>
-      <span class="text-xs">Frameworks</span>
-    </a>
-    <a href="/libraries" class="text-gray-300 hover:text-white hover:bg-gray-800 p-2 rounded-md flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-      </svg>
-      <span class="text-xs">Libraries</span>
-    </a>
-    <a href="/about" class="text-gray-300 hover:text-white hover:bg-gray-800 p-2 rounded-md flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span class="text-xs">About</span>
-    </a>
-  </div>
-  <div class="p-4 border-t border-gray-800">
-    <a href="/search" class="text-gray-300 hover:text-white p-2 rounded-md flex items-center">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
-      <span class="text-xs">Search</span>
-    </a>
+  
+  <!-- Mobile menu, show/hide based on menu state -->
+  <div id="mobile-menu" class="hidden md:hidden bg-gray-50 border-t border-gray-200">
+    <div class="px-2 pt-2 pb-3 space-y-1">
+      <a href="/frameworks" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Frameworks</a>
+      <a href="/libraries" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Libraries</a>
+      <a href="/search" class="text-gray-600 hover:text-indigo-600 block px-3 py-2 rounded-md text-base font-medium">Search</a>
+    </div>
   </div>
 </nav>
-
-<!-- Mobile menu button -->
-<div class="fixed top-0 left-0 z-20 p-4 md:hidden">
-  <button id="mobile-menu-button" class="text-gray-800 hover:text-gray-600 focus:outline-none">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
-  </button>
-</div>
 
 <script>
   // Function to handle mobile menu
   function initMobileMenu() {
-    const sidebar = document.getElementById('sidebar');
     const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
     
     // Mobile menu toggle
-    if (mobileMenuButton && sidebar) {
+    if (mobileMenuButton && mobileMenu) {
       mobileMenuButton.addEventListener('click', () => {
-        sidebar.classList.toggle('-translate-x-full');
+        mobileMenu.classList.toggle('hidden');
       });
-    }
-
-    // Hide menu by default on mobile
-    if (window.innerWidth < 768 && sidebar) {
-      sidebar.classList.add('-translate-x-full');
     }
   }
 
@@ -77,9 +80,8 @@
 </script>
 
 <style>
-  @media (max-width: 768px) {
-    nav {
-      transition: transform 0.3s ease-in-out;
-    }
+  /* Add padding to body to account for fixed navbar */
+  :global(body) {
+    padding-top: 4rem;
   }
 </style>

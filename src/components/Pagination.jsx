@@ -2,18 +2,48 @@ import { useState, useEffect } from 'react';
 
 export default function Pagination({ totalItems, itemsPerPage = 20, currentPage = 1, onPageChange }) {
   const [page, setPage] = useState(currentPage);
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const [total, setTotal] = useState(totalItems);
+  const totalPages = Math.ceil(total / itemsPerPage);
   
   // Reset to page 1 if totalItems or itemsPerPage changes
   useEffect(() => {
-    setPage(1);
-    if (onPageChange) onPageChange(1);
+    setTotal(totalItems);
+    // Don't reset page when component mounts with a specific currentPage
+    if (currentPage === 1) {
+      setPage(1);
+      if (onPageChange) onPageChange(1);
+    }
   }, [totalItems, itemsPerPage]);
+  
+  // Update when currentPage prop changes
+  useEffect(() => {
+    setPage(currentPage);
+  }, [currentPage]);
   
   // Update parent when page changes
   useEffect(() => {
     if (onPageChange) onPageChange(page);
   }, [page, onPageChange]);
+  
+  // Listen for updatePagination events
+  useEffect(() => {
+    const handleUpdatePagination = (e) => {
+      if (e.detail) {
+        if (e.detail.totalItems !== undefined) {
+          setTotal(e.detail.totalItems);
+        }
+        if (e.detail.currentPage !== undefined) {
+          setPage(e.detail.currentPage);
+        }
+      }
+    };
+    
+    document.addEventListener('updatePagination', handleUpdatePagination);
+    
+    return () => {
+      document.removeEventListener('updatePagination', handleUpdatePagination);
+    };
+  }, []);
   
   // Handle page change
   const handlePageChange = (newPage) => {

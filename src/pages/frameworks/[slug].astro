@@ -2,11 +2,14 @@
 import Layout from '../../layouts/Layout.astro';
 import LibraryCard from '../../components/LibraryCard.astro';
 import SortingControl from '../../components/SortingControl.jsx';
+import Pagination from '../../components/Pagination.jsx';
 import { supabase } from '../../lib/supabase';
 
 export const prerender = false;
 
 const { slug } = Astro.params;
+const ITEMS_PER_PAGE = 20;
+const currentPage = 1; // Default to first page for initial load
 
 // Get framework details
 const { data: framework } = await supabase
@@ -23,7 +26,13 @@ if (!framework) {
   return Astro.redirect('/404');
 }
 
-// Get libraries for this framework with labels
+// Get total count of libraries for this framework
+const { count } = await supabase
+  .from('library_frameworks')
+  .select('*', { count: 'exact', head: true })
+  .eq('framework_id', framework.id);
+
+// Get libraries for this framework with labels (paginated)
 const { data: libraryRelations } = await supabase
   .from('library_frameworks')
   .select(`
@@ -41,7 +50,8 @@ const { data: libraryRelations } = await supabase
       )
     )
   `)
-  .eq('framework_id', framework.id);
+  .eq('framework_id', framework.id)
+  .range(0, ITEMS_PER_PAGE - 1); // Get first page (0-indexed)
 
 // Extract the actual library objects and filter out any nulls
 const libraries = libraryRelations
@@ -80,7 +90,7 @@ function formatNumber(num) {
           <div>
             <h1 class="text-xl font-bold text-gray-900">{framework.name}</h1>
             <p class="text-sm text-gray-500">
-              {libraries.length} {libraries.length === 1 ? 'library' : 'libraries'} available
+              {count} {count === 1 ? 'library' : 'libraries'} available
             </p>
           </div>
           <div class="ml-auto flex space-x-4">
@@ -182,6 +192,14 @@ function formatNumber(num) {
             />
           ))}
         </div>
+        
+        {/* Pagination component */}
+        <Pagination 
+          totalItems={count || 0} 
+          itemsPerPage={ITEMS_PER_PAGE} 
+          currentPage={currentPage}
+          client:load
+        />
       </>
     ) : (
       <div class="text-center py-12">
@@ -191,12 +209,167 @@ function formatNumber(num) {
   </main>
 </Layout>
 
-<script define:vars={{ libraries }}>
+<script define:vars={{ libraries, count, ITEMS_PER_PAGE, slug }}>
   // Make library data available to the client-side script
   window.libraryData = JSON.parse(JSON.stringify(libraries));
+  window.totalLibraries = count;
+  window.itemsPerPage = ITEMS_PER_PAGE;
+  window.frameworkSlug = slug;
   
-  // Initialize sorting functionality
-  function initSorting() {
+  // Function to create a library card element from library data
+  function createLibraryCard(library) {
+    // Create the main container
+    const card = document.createElement('div');
+    card.className = 'bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-200 relative';
+    card.dataset.stars = library.github_stars || 0;
+    card.dataset.updated = library.last_update || '';
+    card.dataset.components = library.total_components || 0;
+    card.dataset.downloads = library.npm_downloads || 0;
+    card.dataset.forks = library.github_forks || 0;
+    
+    // Format numbers for display
+    function formatNumber(num) {
+      if (!num) return '0';
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+      }
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'k';
+      }
+      return num.toString();
+    }
+    
+    // Get primary framework
+    const primaryFramework = library.frameworks?.find(fw => fw.is_primary)?.framework_id;
+    const imageUrl = library.icon_url || library.logo_url || '/favicon.svg';
+    
+    // Check for manual labels
+    const hasManualLabels = library.labels && library.labels.length > 0;
+    const firstLabel = hasManualLabels ? library.labels[0].label_id : null;
+    
+    // Create trending label if needed
+    if (library.is_trending && !hasManualLabels) {
+      const trendingLabel = document.createElement('div');
+      trendingLabel.className = 'absolute top-0 right-0 mt-1 mr-1';
+      trendingLabel.innerHTML = `
+        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium bg-rose-500 text-white">
+          Trending
+        </span>
+      `;
+      card.appendChild(trendingLabel);
+    }
+    
+    // Create manual label if available
+    if (hasManualLabels && firstLabel) {
+      const manualLabel = document.createElement('div');
+      manualLabel.className = 'absolute top-0 right-0 mt-1 mr-1';
+      manualLabel.innerHTML = `
+        <span 
+          class="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-medium"
+          style="background-color: ${firstLabel.color}; color: ${firstLabel.text_color || 'white'};"
+        >
+          ${firstLabel.name}
+        </span>
+      `;
+      card.appendChild(manualLabel);
+    }
+    
+    // Create library link and info
+    const linkContainer = document.createElement('a');
+    linkContainer.href = `/libraries/${library.slug}`;
+    linkContainer.className = 'block group';
+    linkContainer.innerHTML = `
+      <div class="p-4 flex flex-col items-center">
+        <div class="w-12 h-12 flex items-center justify-center mb-3">
+          <img 
+            src="${imageUrl}" 
+            alt="${library.name} logo" 
+            class="max-w-full max-h-full object-contain"
+            onerror="this.onerror=null; this.src='/favicon.svg';"
+          />
+        </div>
+        <h3 class="text-sm font-medium text-gray-900 text-center group-hover:text-indigo-600 mb-1">
+          ${library.name}
+        </h3>
+        
+        ${primaryFramework ? `
+          <div class="text-xs text-gray-500 text-center">
+            ${primaryFramework.name}
+          </div>
+        ` : ''}
+      </div>
+    `;
+    card.appendChild(linkContainer);
+    
+    // Create stats row
+    const statsRow = document.createElement('div');
+    statsRow.className = 'px-4 pb-4 flex items-center justify-center space-x-4 text-xs text-gray-500';
+    
+    // Components stat
+    if (library.total_components) {
+      statsRow.innerHTML += `
+        <div class="flex items-center group relative">
+          <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+          </svg>
+          <span>${formatNumber(library.total_components)}</span>
+          <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-indigo-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium">
+            <div class="absolute w-3 h-3 bg-indigo-700 transform rotate-45 -bottom-1 left-1/2 -ml-1.5"></div>
+            ${library.total_components.toLocaleString()} Components
+          </div>
+        </div>
+      `;
+    }
+    
+    // Downloads stat
+    if (library.npm_downloads) {
+      statsRow.innerHTML += `
+        <div class="flex items-center group relative">
+          <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span>${formatNumber(library.npm_downloads)}</span>
+          <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-indigo-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium">
+            <div class="absolute w-3 h-3 bg-indigo-700 transform rotate-45 -bottom-1 left-1/2 -ml-1.5"></div>
+            ${library.npm_downloads.toLocaleString()} Downloads
+          </div>
+        </div>
+      `;
+    }
+    
+    // Forks stat
+    if (library.github_forks) {
+      statsRow.innerHTML += `
+        <div class="flex items-center group relative">
+          <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
+          </svg>
+          <span>${formatNumber(library.github_forks)}</span>
+          <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-indigo-700 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 font-medium">
+            <div class="absolute w-3 h-3 bg-indigo-700 transform rotate-45 -bottom-1 left-1/2 -ml-1.5"></div>
+            ${library.github_forks.toLocaleString()} Forks
+          </div>
+        </div>
+      `;
+    }
+    
+    card.appendChild(statsRow);
+    
+    // Add text-2xs class style
+    const style = document.createElement('style');
+    style.textContent = `
+      .text-2xs {
+        font-size: 0.65rem;
+        line-height: 0.85rem;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return card;
+  }
+  
+  // Initialize sorting and pagination functionality
+  function initLibraryDisplay() {
     // Get all library cards
     const librariesGrid = document.getElementById('libraries-grid');
     if (!librariesGrid) return;
@@ -233,12 +406,6 @@ function formatNumber(num) {
           const bDownloads = parseInt(b.getAttribute('data-downloads') || '0');
           return bDownloads - aDownloads;
         }
-        else if (sortBy === 'forks') {
-          // Sort by GitHub forks
-          const aForks = parseInt(a.getAttribute('data-forks') || '0');
-          const bForks = parseInt(b.getAttribute('data-forks') || '0');
-          return bForks - aForks;
-        }
         
         return 0;
       });
@@ -252,14 +419,52 @@ function formatNumber(num) {
     document.addEventListener('sortChange', (e) => {
       sortLibraries(e.detail.sortBy);
     });
+    
+    // Handle pagination page changes
+    document.addEventListener('pageChange', async (e) => {
+      const page = e.detail.page;
+      const start = (page - 1) * window.itemsPerPage;
+      const end = start + window.itemsPerPage - 1;
+      
+      try {
+        // Show<boltAction type="file" filePath="src/pages/frameworks/[slug].astro">
+        // Show loading state
+        librariesGrid.innerHTML = '<div class="col-span-full text-center py-8"><div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div></div>';
+        
+        // Fetch libraries for the current page
+        const response = await fetch(`/api/libraries?frameworkSlug=${window.frameworkSlug}&start=${start}&end=${end}`);
+        
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.libraries && data.libraries.length > 0) {
+          // Clear the grid
+          librariesGrid.innerHTML = '';
+          
+          // Create library cards for the new page
+          data.libraries.forEach(library => {
+            const card = createLibraryCard(library);
+            librariesGrid.appendChild(card);
+          });
+        } else {
+          librariesGrid.innerHTML = '<div class="col-span-full text-center py-8">No libraries found for this page.</div>';
+        }
+      } catch (error) {
+        console.error('Error fetching libraries:', error);
+        librariesGrid.innerHTML = '<div class="col-span-full text-center py-8">Error loading libraries. Please try again.</div>';
+      }
+    });
   }
 
   // Initialize on page load
-  document.addEventListener('DOMContentLoaded', initSorting);
+  document.addEventListener('DOMContentLoaded', initLibraryDisplay);
   
   // Also initialize on Astro page transitions
-  document.addEventListener('astro:page-load', initSorting);
+  document.addEventListener('astro:page-load', initLibraryDisplay);
   
   // Run immediately for initial page load
-  initSorting();
+  initLibraryDisplay();
 </script>

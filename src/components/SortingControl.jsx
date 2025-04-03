@@ -1,64 +1,75 @@
 import { useState, useEffect } from 'react';
 
-export default function SortingControl({ onSortChange, initialSort = 'popular' }) {
-  const [activeSort, setActiveSort] = useState(initialSort);
+export default function SortingControl() {
+  const [sortBy, setSortBy] = useState('popular');
   
-  // Reset state when component is mounted to ensure consistent state after navigation
+  // Initialize from localStorage if available
   useEffect(() => {
-    setActiveSort(initialSort);
-    
-    // If there was a previously selected sort in localStorage, use that
-    const savedSort = localStorage.getItem('librarySort');
+    const savedSort = localStorage.getItem('librarySortBy');
     if (savedSort) {
-      setActiveSort(savedSort);
+      setSortBy(savedSort);
       // Also dispatch the event to apply the sort immediately
       dispatchSortEvent(savedSort);
     }
-  }, [initialSort]);
+  }, []);
   
-  const sortOptions = [
-    { id: 'popular', label: 'Popular' },
-    { id: 'latest', label: 'Latest' },
-    { id: 'components', label: 'Components' },
-    { id: 'downloads', label: 'Downloads' },
-    { id: 'forks', label: 'Forks' }
-  ];
-  
-  const dispatchSortEvent = (sortId) => {
+  const dispatchSortEvent = (sortValue) => {
     const event = new CustomEvent('sortChange', {
-      detail: { sortBy: sortId }
+      detail: { sortBy: sortValue }
     });
     document.dispatchEvent(event);
   };
   
-  const handleSortChange = (sortId) => {
-    setActiveSort(sortId);
-    
-    // Save to localStorage for persistence
-    localStorage.setItem('librarySort', sortId);
-    
-    // Dispatch the custom event
-    dispatchSortEvent(sortId);
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    localStorage.setItem('librarySortBy', value);
+    dispatchSortEvent(value);
   };
   
   return (
-    <div className="flex items-center space-x-1 mb-4">
-      <span className="text-sm text-gray-500 mr-2">Sort by:</span>
-      <div className="flex flex-wrap gap-1">
-        {sortOptions.map((option) => (
-          <button
-            key={option.id}
-            onClick={() => handleSortChange(option.id)}
-            className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-              activeSort === option.id
-                ? 'bg-indigo-100 text-indigo-700'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
+    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3">
+      <div className="text-sm font-medium text-gray-700">Sort by:</div>
+      <div className="flex space-x-2">
+        <SortButton 
+          active={sortBy === 'popular'} 
+          onClick={() => handleSortChange('popular')}
+        >
+          Popular
+        </SortButton>
+        <SortButton 
+          active={sortBy === 'latest'} 
+          onClick={() => handleSortChange('latest')}
+        >
+          Latest
+        </SortButton>
+        <SortButton 
+          active={sortBy === 'components'} 
+          onClick={() => handleSortChange('components')}
+        >
+          Components
+        </SortButton>
+        <SortButton 
+          active={sortBy === 'downloads'} 
+          onClick={() => handleSortChange('downloads')}
+        >
+          Downloads
+        </SortButton>
       </div>
     </div>
+  );
+}
+
+function SortButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+        active
+          ? 'bg-indigo-100 text-indigo-700'
+          : 'text-gray-600 hover:bg-gray-100'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
